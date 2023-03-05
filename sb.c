@@ -178,7 +178,7 @@ void resize_board_surface(Board *board) {
 
 void clear_board(const Board *board) {
   cairo_set_source_rgba(board->canvas, 1, 1, 1, 1.0);
-  cairo_rectangle(board->canvas, 0, 0, board->width, board->height);
+  cairo_paint(board->canvas);
   cairo_fill(board->canvas);
 }
 
@@ -368,10 +368,6 @@ int main() {
         cairo_curve_to(board->canvas, c1.x, c1.y, c2.x, c2.y, mouse_x, mouse_y);
         cairo_path_t *subpath = cairo_copy_path(board->canvas);
         sb_append_subpath(&sb_path, subpath);
-        // SDL_Rect bounds = {.x = MAX(0, mouse_x - 40),
-        // .y = MAX(0, mouse_y - 40),
-        // .w = 80,
-        // .h = 80};
         SDL_Rect bounds = get_path_bounding_area(board->canvas);
         cairo_stroke(board->canvas);
         render_board(board, &bounds);
