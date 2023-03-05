@@ -7,11 +7,13 @@
 #include <cairo/cairo.h>
 
 #define GROWTH_RATE 2
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 typedef struct {
   SDL_Window *window;
   SDL_Renderer *renderer;
   SDL_Surface *sdl_surface;
+  SDL_Texture *sdl_texture;
   cairo_surface_t *cr_surface;
   cairo_t *canvas;
   int width;
@@ -58,12 +60,24 @@ Board *create_board(int width, int height) {
     return NULL;
   }
 
+  SDL_Texture *sdl_texture =
+      SDL_CreateTextureFromSurface(renderer, sdl_surface);
+
+  if (sdl_texture == NULL) {
+    free(board);
+    SDL_FreeSurface(sdl_surface);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    return NULL;
+  }
+
   cairo_surface_t *cr_surface = cairo_image_surface_create_for_data(
       (unsigned char *)sdl_surface->pixels, CAIRO_FORMAT_RGB24, sdl_surface->w,
       sdl_surface->h, sdl_surface->pitch);
 
   if (cr_surface == NULL) {
     free(board);
+    SDL_DestroyTexture(sdl_texture);
     SDL_FreeSurface(sdl_surface);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -82,6 +96,7 @@ Board *create_board(int width, int height) {
   if (canvas == NULL) {
     free(board);
     cairo_surface_destroy(cr_surface);
+    SDL_DestroyTexture(sdl_texture);
     SDL_FreeSurface(sdl_surface);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -91,6 +106,7 @@ Board *create_board(int width, int height) {
   board->window = window;
   board->renderer = renderer;
   board->sdl_surface = sdl_surface;
+  board->sdl_texture = sdl_texture;
   board->cr_surface = cr_surface;
   board->canvas = canvas;
   board->width = window_width;
@@ -106,6 +122,7 @@ void free_board(Board *board) {
 
   cairo_destroy(board->canvas);
   cairo_surface_destroy(board->cr_surface);
+  SDL_DestroyTexture(board->sdl_texture);
   SDL_FreeSurface(board->sdl_surface);
   SDL_DestroyRenderer(board->renderer);
   SDL_DestroyWindow(board->window);
@@ -125,6 +142,14 @@ void resize_board_surface(Board *board) {
   if (sdl_surface != NULL) {
     SDL_FreeSurface(board->sdl_surface);
     board->sdl_surface = sdl_surface;
+  }
+
+  SDL_Texture *sdl_texture =
+      SDL_CreateTextureFromSurface(board->renderer, sdl_surface);
+
+  if (sdl_texture != NULL) {
+    SDL_DestroyTexture(board->sdl_texture);
+    board->sdl_texture = sdl_texture;
   }
 
   cairo_surface_t *cr_surface = cairo_image_surface_create_for_data(
@@ -157,12 +182,34 @@ void clear_board(const Board *board) {
   cairo_fill(board->canvas);
 }
 
-void render_board(const Board *board) {
-  SDL_Texture *texture =
-      SDL_CreateTextureFromSurface(board->renderer, board->sdl_surface);
-  SDL_RenderCopy(board->renderer, texture, NULL, NULL);
+void render_board(const Board *board, SDL_Rect *update_area) {
+  unsigned char *data = cairo_image_surface_get_data(board->cr_surface);
+  int pitch = board->sdl_surface->pitch;
+  if (update_area != NULL) {
+    // transform the data and "offset" it in such way
+    // that when we update the surface, it appears as
+    // if it is rendered in the right place.
+    unsigned char *new_data = malloc(board->width * board->height * 4);
+    int line = board->width * 4;
+    for (int l = 0; l < board->height; ++l) {
+      for (int i = l * line; i < update_area->w * 4 + l * line; ++i) {
+        int transformation = i + update_area->x * 4 + update_area->y * line;
+        if (transformation < board->width * board->height * 4) {
+          new_data[i] = data[transformation];
+        }
+      }
+    }
+    data = new_data;
+  }
+  SDL_UpdateTexture(board->sdl_texture, update_area, data,
+                    board->sdl_surface->pitch);
+  SDL_RenderClear(board->renderer);
+  SDL_RenderCopy(board->renderer, board->sdl_texture, NULL, NULL);
   SDL_RenderPresent(board->renderer);
-  SDL_DestroyTexture(texture);
+
+  if (update_area != NULL) {
+    free(data);
+  }
 }
 
 typedef struct {
@@ -241,6 +288,20 @@ cairo_path_t *sb_to_cairo(cairo_t *cr, sb_path_t *sb_path) {
   return generated_path;
 }
 
+SDL_Rect get_path_bounding_area(cairo_t *cr) {
+  double x1;
+  double y1;
+  double x2;
+  double y2;
+  cairo_stroke_extents(cr, &x1, &y1, &x2, &y2);
+  int x = (int)(x1 - 3);
+  int y = (int)(y1 - 3);
+  int w = (int)(x2 - x + 3);
+  int h = (int)(y2 - y + 3);
+  SDL_Rect area = {.x = MAX(0, x), .y = MAX(0, y), .w = w, .h = h};
+  return area;
+}
+
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
   Board *board = create_board(600, 480);
@@ -271,7 +332,7 @@ int main() {
             cairo_append_path(board->canvas, &all_strokes.sub_paths[i]);
           }
           cairo_stroke(board->canvas);
-          render_board(board);
+          render_board(board, NULL);
         }
       } break;
       case SDL_MOUSEBUTTONDOWN: {
@@ -307,8 +368,13 @@ int main() {
         cairo_curve_to(board->canvas, c1.x, c1.y, c2.x, c2.y, mouse_x, mouse_y);
         cairo_path_t *subpath = cairo_copy_path(board->canvas);
         sb_append_subpath(&sb_path, subpath);
+        // SDL_Rect bounds = {.x = MAX(0, mouse_x - 40),
+        // .y = MAX(0, mouse_y - 40),
+        // .w = 80,
+        // .h = 80};
+        SDL_Rect bounds = get_path_bounding_area(board->canvas);
         cairo_stroke(board->canvas);
-        render_board(board);
+        render_board(board, &bounds);
         cairo_move_to(board->canvas, mouse_x, mouse_y);
       } break;
       case SDL_KEYDOWN: {
@@ -325,7 +391,7 @@ int main() {
             cairo_append_path(board->canvas, &all_strokes.sub_paths[i]);
           }
           cairo_stroke(board->canvas);
-          render_board(board);
+          render_board(board, NULL);
         }
       } break;
       default:
