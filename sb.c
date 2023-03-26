@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,8 @@
 
 #define GROWTH_RATE 2
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define LINE_WIDTH 3.0
+#define RATIO 3.0
 
 typedef struct {
   SDL_Window *window;
@@ -22,18 +25,15 @@ typedef struct {
 
 Board *create_board(int width, int height) {
   Board *board = malloc(sizeof(Board));
-  SDL_Window *window = SDL_CreateWindow(
-      "Simple Board", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width,
-      height,
-      SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+  SDL_Window *window = SDL_CreateWindow("Simple Board", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height,
+                                        SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
 
   if (window == NULL) {
     free(board);
     return NULL;
   }
 
-  SDL_Renderer *renderer =
-      SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
   if (renderer == NULL) {
     free(board);
@@ -50,8 +50,7 @@ Board *create_board(int width, int height) {
   SDL_GetRendererOutputSize(renderer, &renderer_width, &renderer_height);
 
   SDL_Surface *sdl_surface =
-      SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00FF0000,
-                           0x0000FF00, 0x000000FF, 0);
+      SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0);
 
   if (sdl_surface == NULL) {
     free(board);
@@ -60,8 +59,7 @@ Board *create_board(int width, int height) {
     return NULL;
   }
 
-  SDL_Texture *sdl_texture =
-      SDL_CreateTextureFromSurface(renderer, sdl_surface);
+  SDL_Texture *sdl_texture = SDL_CreateTextureFromSurface(renderer, sdl_surface);
 
   if (sdl_texture == NULL) {
     free(board);
@@ -72,8 +70,7 @@ Board *create_board(int width, int height) {
   }
 
   cairo_surface_t *cr_surface = cairo_image_surface_create_for_data(
-      (unsigned char *)sdl_surface->pixels, CAIRO_FORMAT_RGB24, sdl_surface->w,
-      sdl_surface->h, sdl_surface->pitch);
+      (unsigned char *)sdl_surface->pixels, CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h, sdl_surface->pitch);
 
   if (cr_surface == NULL) {
     free(board);
@@ -137,39 +134,39 @@ void resize_board_surface(Board *board) {
   SDL_GetRendererOutputSize(board->renderer, &renderer_width, &renderer_height);
 
   SDL_Surface *sdl_surface =
-      SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00ff0000,
-                           0x0000ff00, 0x000000ff, 0);
-  if (sdl_surface != NULL) {
-    SDL_FreeSurface(board->sdl_surface);
-    board->sdl_surface = sdl_surface;
+      SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0);
+  if (sdl_surface == NULL) {
+    return;
   }
 
-  SDL_Texture *sdl_texture =
-      SDL_CreateTextureFromSurface(board->renderer, sdl_surface);
+  SDL_FreeSurface(board->sdl_surface);
+  board->sdl_surface = sdl_surface;
 
-  if (sdl_texture != NULL) {
-    SDL_DestroyTexture(board->sdl_texture);
-    board->sdl_texture = sdl_texture;
+  SDL_Texture *sdl_texture = SDL_CreateTextureFromSurface(board->renderer, sdl_surface);
+
+  if (sdl_texture == NULL) {
+    SDL_FreeSurface(sdl_surface);
   }
+
+  SDL_DestroyTexture(board->sdl_texture);
+  board->sdl_texture = sdl_texture;
 
   cairo_surface_t *cr_surface = cairo_image_surface_create_for_data(
-      (unsigned char *)sdl_surface->pixels, CAIRO_FORMAT_RGB24, sdl_surface->w,
-      sdl_surface->h, sdl_surface->pitch);
+      (unsigned char *)sdl_surface->pixels, CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h, sdl_surface->pitch);
 
-  cairo_surface_t *old_cr_surface = board->cr_surface;
-  board->cr_surface = cr_surface;
-  if (old_cr_surface != cr_surface) {
-    cairo_surface_destroy(old_cr_surface);
+  if (board->cr_surface != cr_surface) {
+    cairo_surface_destroy(board->cr_surface);
+    board->cr_surface = cr_surface;
   }
 
   int cairo_x_multiplier = renderer_width / board->width;
   int cairo_y_multiplier = renderer_height / board->height;
 
   cairo_t *canvas = cairo_create(board->cr_surface);
-  cairo_t *old_canvas = board->canvas;
-  board->canvas = canvas;
-  if (canvas != old_canvas) {
-    cairo_destroy(old_canvas);
+
+  if (board->canvas != canvas) {
+    cairo_destroy(board->canvas);
+    board->canvas = canvas;
   }
 
   cairo_set_source_surface(board->canvas, cr_surface, 0, 0);
@@ -201,8 +198,7 @@ void render_board(const Board *board, SDL_Rect *update_area) {
     }
     data = new_data;
   }
-  SDL_UpdateTexture(board->sdl_texture, update_area, data,
-                    board->sdl_surface->pitch);
+  SDL_UpdateTexture(board->sdl_texture, update_area, data, board->sdl_surface->pitch);
   SDL_RenderClear(board->renderer);
   SDL_RenderCopy(board->renderer, board->sdl_texture, NULL, NULL);
   SDL_RenderPresent(board->renderer);
@@ -213,13 +209,114 @@ void render_board(const Board *board, SDL_Rect *update_area) {
 }
 
 typedef struct {
-  int x;
-  int y;
+  double x;
+  double y;
 } sb_point_t;
 
-sb_point_t create_point(int x, int y) {
+sb_point_t create_point(double x, double y) {
   sb_point_t point = {.x = x, .y = y};
   return point;
+}
+
+sb_point_t subtract_sb_points(sb_point_t p1, sb_point_t p2) {
+  double x = p1.x - p2.x;
+  double y = p1.y - p2.y;
+  return create_point(x, y);
+}
+
+sb_point_t sum_sb_points(sb_point_t p1, sb_point_t p2) {
+  double x = p1.x + p2.x;
+  double y = p1.y + p2.y;
+  return create_point(x, y);
+}
+
+double sb_point_length(sb_point_t p) {
+  double point_length_squared = p.x * p.x + p.y * p.y;
+  double point_length = sqrt(point_length_squared);
+  return point_length;
+}
+
+sb_point_t multiply_sb_point(sb_point_t p, double multiplier) {
+  return create_point(p.x * multiplier, p.y * multiplier);
+}
+
+sb_point_t normalize_sb_point(sb_point_t p) {
+  double length = sb_point_length(p);
+  if (length == 0) {
+    return p;
+  }
+  return multiply_sb_point(p, 1.0 / length);
+}
+
+void create_handle_triple(sb_point_t origin, sb_point_t dest, sb_point_t next, sb_point_t *h1, sb_point_t *h2) {
+  sb_point_t parallel_direction_next = normalize_sb_point(subtract_sb_points(next, origin));
+  sb_point_t delta = subtract_sb_points(dest, origin);
+  sb_point_t ratio_delta = multiply_sb_point(delta, 1.0 / RATIO);
+  *h1 = sum_sb_points(origin, ratio_delta);
+
+  double delta_length = sb_point_length(delta);
+  sb_point_t handle_offset = multiply_sb_point(parallel_direction_next, delta_length / RATIO);
+  *h2 = subtract_sb_points(dest, handle_offset);
+}
+
+void create_handle_quad(sb_point_t prev, sb_point_t origin, sb_point_t dest, sb_point_t next, sb_point_t *h1,
+                        sb_point_t *h2) {
+  sb_point_t parallel_direction_prev = normalize_sb_point(subtract_sb_points(dest, prev));
+  sb_point_t parallel_direction_next = normalize_sb_point(subtract_sb_points(next, origin));
+  sb_point_t delta = subtract_sb_points(dest, origin);
+  double delta_len = sb_point_length(delta);
+  *h1 = sum_sb_points(origin, multiply_sb_point(parallel_direction_prev, delta_len / RATIO));
+  *h2 = subtract_sb_points(dest, multiply_sb_point(parallel_direction_next, delta_len / RATIO));
+}
+
+typedef struct {
+  sb_point_t *points;
+  int occupied;
+  int capacity;
+} sb_points_vec;
+
+sb_points_vec create_sb_points_vec() {
+  sb_points_vec v = {.points = NULL, .occupied = 0, .capacity = 0};
+  return v;
+}
+
+void reset_sb_points_vec(sb_points_vec *vec) {
+  // ...
+  vec->occupied = 0;
+}
+
+void free_sb_points_vec(sb_points_vec *vec) {
+  free(vec->points);
+  vec->occupied = 0;
+  vec->capacity = 0;
+}
+
+void sb_append_points_vec(sb_points_vec *vec, sb_point_t point) {
+  if (vec->capacity == 0) {
+    vec->points = malloc(sizeof(sb_point_t));
+    if (vec->points == NULL) {
+      return;
+    }
+
+    vec->points[0] = point;
+    vec->capacity = 1;
+    vec->occupied = 1;
+    return;
+  }
+  // conditionally increase size of sub_paths
+  if (vec->capacity == vec->occupied) {
+    int new_size = sizeof(sb_point_t) * vec->capacity * GROWTH_RATE;
+    sb_point_t *new_points = realloc(vec->points, new_size);
+    if (new_points == NULL) {
+      return;
+    }
+
+    vec->points = new_points;
+    vec->capacity = vec->capacity * GROWTH_RATE;
+  }
+
+  vec->points[vec->occupied] = point;
+  vec->occupied++;
 }
 
 typedef struct {
@@ -234,15 +331,16 @@ sb_path_t create_sb_path() {
 }
 
 void reset_sb_path(sb_path_t *path) {
-  // TODO: sort those two functions(this and free_sb_path)
+  // ...
   path->occupied = 0;
 }
 
-// MAYBE
 void free_sb_path(sb_path_t *path) {
   for (int i = 0; i < path->occupied; ++i) {
     cairo_path_destroy(&path->sub_paths[i]);
   }
+  path->occupied = 0;
+  path->capacity = 0;
   free(path->sub_paths);
 }
 
@@ -310,8 +408,7 @@ int main() {
   bool running = true;
   bool is_drawing = false;
   int mouse_x, mouse_y;
-  sb_point_t points_buffer[2];
-  int points_buffer_index = 0;
+  sb_points_vec current_stroke = create_sb_points_vec();
   sb_path_t sb_path = create_sb_path();
   sb_path_t all_strokes = create_sb_path();
 
@@ -327,7 +424,9 @@ int main() {
           resize_board_surface(board);
           clear_board(board);
           cairo_set_source_rgba(board->canvas, 0, 0, 0, 1.0);
-          cairo_set_line_width(board->canvas, 1.0);
+          cairo_set_line_width(board->canvas, LINE_WIDTH);
+          cairo_set_line_cap(board->canvas, CAIRO_LINE_CAP_ROUND);
+          cairo_set_line_join(board->canvas, CAIRO_LINE_JOIN_ROUND);
           for (int i = 0; i < all_strokes.occupied; ++i) {
             cairo_append_path(board->canvas, &all_strokes.sub_paths[i]);
           }
@@ -339,10 +438,10 @@ int main() {
         is_drawing = true;
         SDL_GetMouseState(&mouse_x, &mouse_y);
         cairo_set_source_rgba(board->canvas, 0, 0, 0, 1.0);
-        cairo_set_line_width(board->canvas, 1.0);
-        cairo_move_to(board->canvas, mouse_x, mouse_y);
-        points_buffer[0] = create_point(mouse_x, mouse_y);
-        points_buffer_index = 1;
+        cairo_set_line_width(board->canvas, LINE_WIDTH);
+        cairo_set_line_cap(board->canvas, CAIRO_LINE_CAP_ROUND);
+        cairo_set_line_join(board->canvas, CAIRO_LINE_JOIN_ROUND);
+        reset_sb_points_vec(&current_stroke);
         reset_sb_path(&sb_path);
       } break;
       case SDL_MOUSEBUTTONUP: {
@@ -356,25 +455,52 @@ int main() {
         }
 
         SDL_GetMouseState(&mouse_x, &mouse_y);
-        if (points_buffer_index < 2) {
-          points_buffer[points_buffer_index] = create_point(mouse_x, mouse_y);
-          points_buffer_index++;
+        sb_point_t point = create_point(mouse_x, mouse_y);
+        if (current_stroke.occupied > 0 && point.x == current_stroke.points[current_stroke.occupied - 1].x &&
+            point.y == current_stroke.points[current_stroke.occupied - 1].y) {
           break;
         }
 
-        sb_point_t c1 = points_buffer[0];
-        sb_point_t c2 = points_buffer[1];
-        points_buffer_index = 0;
-        cairo_curve_to(board->canvas, c1.x, c1.y, c2.x, c2.y, mouse_x, mouse_y);
+        sb_append_points_vec(&current_stroke, point);
+        switch (current_stroke.occupied) {
+        case 1:
+          cairo_move_to(board->canvas, point.x, point.y);
+          break;
+        case 2:
+          cairo_line_to(board->canvas, point.x, point.y);
+          break;
+        case 3: {
+          sb_point_t prev = current_stroke.points[0];
+          sb_point_t origin = current_stroke.points[1];
+          sb_point_t dest = current_stroke.points[2];
+
+          sb_point_t h1, h2;
+          create_handle_triple(prev, origin, dest, &h1, &h2);
+          cairo_move_to(board->canvas, origin.x, origin.y);
+          cairo_curve_to(board->canvas, h1.x, h1.y, h2.x, h2.y, dest.x, dest.y);
+        } break;
+        default: {
+          int last = current_stroke.occupied - 1;
+          sb_point_t prev = current_stroke.points[last - 3];
+          sb_point_t origin = current_stroke.points[last - 2];
+          sb_point_t dest = current_stroke.points[last - 1];
+          sb_point_t next = current_stroke.points[last];
+          sb_point_t h1, h2;
+          create_handle_quad(prev, origin, dest, next, &h1, &h2);
+          cairo_move_to(board->canvas, origin.x, origin.y);
+          cairo_curve_to(board->canvas, h1.x, h1.y, h2.x, h2.y, dest.x, dest.y);
+        } break;
+        }
+
         cairo_path_t *subpath = cairo_copy_path(board->canvas);
         sb_append_subpath(&sb_path, subpath);
         SDL_Rect bounds = get_path_bounding_area(board->canvas);
         cairo_stroke(board->canvas);
         render_board(board, &bounds);
-        cairo_move_to(board->canvas, mouse_x, mouse_y);
       } break;
       case SDL_KEYDOWN: {
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
+        // ctrl+z
         if (keys[SDL_SCANCODE_LCTRL] && keys[SDL_SCANCODE_Z]) {
           if (all_strokes.occupied == 0) {
             break;
@@ -382,7 +508,9 @@ int main() {
           all_strokes.occupied--;
           clear_board(board);
           cairo_set_source_rgba(board->canvas, 0, 0, 0, 1.0);
-          cairo_set_line_width(board->canvas, 1.0);
+          cairo_set_line_width(board->canvas, LINE_WIDTH);
+          cairo_set_line_cap(board->canvas, CAIRO_LINE_CAP_ROUND);
+          cairo_set_line_join(board->canvas, CAIRO_LINE_JOIN_ROUND);
           for (int i = 0; i < all_strokes.occupied; ++i) {
             cairo_append_path(board->canvas, &all_strokes.sub_paths[i]);
           }
@@ -396,7 +524,6 @@ int main() {
     }
     SDL_Delay(1000 / 60);
   }
-
   free_board(board);
   SDL_Quit();
 }
