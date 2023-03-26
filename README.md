@@ -3,7 +3,7 @@
 
 ### Compilation
 ```sh
-$ gcc sb.c -lSDL2 -lcairo -o sb
+$ gcc sb.c -lSDL2 -lcairo -lm -o sb
 ```
 
 ### Requirements
