@@ -11,6 +11,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define LINE_WIDTH 3.0
 #define RATIO 3.0
+#define TAU 6.28318530718
 
 typedef struct {
   SDL_Window *window;
@@ -437,12 +438,26 @@ int main() {
       case SDL_MOUSEBUTTONDOWN: {
         is_drawing = true;
         SDL_GetMouseState(&mouse_x, &mouse_y);
+        sb_point_t point = create_point(mouse_x, mouse_y);
         cairo_set_source_rgba(board->canvas, 0, 0, 0, 1.0);
         cairo_set_line_width(board->canvas, LINE_WIDTH);
         cairo_set_line_cap(board->canvas, CAIRO_LINE_CAP_ROUND);
         cairo_set_line_join(board->canvas, CAIRO_LINE_JOIN_ROUND);
         reset_sb_points_vec(&current_stroke);
         reset_sb_path(&sb_path);
+        sb_append_points_vec(&current_stroke, point);
+        cairo_move_to(board->canvas, point.x, point.y);
+        cairo_arc(board->canvas, mouse_x, mouse_y, 0, 0, TAU);
+        cairo_path_t *point_path = cairo_copy_path(board->canvas);
+        sb_append_subpath(&sb_path, point_path);
+        cairo_stroke(board->canvas);
+        SDL_Rect bounds = {
+            .x = point.x - LINE_WIDTH,
+            .y = point.y - LINE_WIDTH,
+            .w = 2 * LINE_WIDTH,
+            .h = 2 * LINE_WIDTH,
+        };
+        render_board(board, &bounds);
       } break;
       case SDL_MOUSEBUTTONUP: {
         is_drawing = false;
@@ -456,26 +471,26 @@ int main() {
 
         SDL_GetMouseState(&mouse_x, &mouse_y);
         sb_point_t point = create_point(mouse_x, mouse_y);
-        if (current_stroke.occupied > 0 && point.x == current_stroke.points[current_stroke.occupied - 1].x &&
-            point.y == current_stroke.points[current_stroke.occupied - 1].y) {
+        // it is guaranteed that there's at least one point in current_stroke.points
+        sb_point_t last_point = current_stroke.points[current_stroke.occupied - 1];
+        if (point.x == last_point.x && point.y == last_point.y) {
           break;
         }
 
         sb_append_points_vec(&current_stroke, point);
         switch (current_stroke.occupied) {
-        case 1:
-          cairo_move_to(board->canvas, point.x, point.y);
-          break;
-        case 2:
-          cairo_line_to(board->canvas, point.x, point.y);
-          break;
-        case 3: {
+        // after appending another point, there's at least 2 points
+        case 2: {
           sb_point_t prev = current_stroke.points[0];
-          sb_point_t origin = current_stroke.points[1];
-          sb_point_t dest = current_stroke.points[2];
+          cairo_move_to(board->canvas, prev.x, prev.y);
+        } break;
+        case 3: {
+          sb_point_t origin = current_stroke.points[0];
+          sb_point_t dest = current_stroke.points[1];
+          sb_point_t next = current_stroke.points[2];
 
           sb_point_t h1, h2;
-          create_handle_triple(prev, origin, dest, &h1, &h2);
+          create_handle_triple(origin, dest, next, &h1, &h2);
           cairo_move_to(board->canvas, origin.x, origin.y);
           cairo_curve_to(board->canvas, h1.x, h1.y, h2.x, h2.y, dest.x, dest.y);
         } break;
