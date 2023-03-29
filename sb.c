@@ -338,11 +338,13 @@ void reset_sb_path(sb_path_t *path) {
 
 void free_sb_path(sb_path_t *path) {
   for (int i = 0; i < path->occupied; ++i) {
-    cairo_path_destroy(&path->sub_paths[i]);
+    cairo_path_t *p = &path->sub_paths[i];
+    free(p->data);
   }
   path->occupied = 0;
   path->capacity = 0;
   free(path->sub_paths);
+  path->sub_paths = NULL;
 }
 
 void sb_append_subpath(sb_path_t *path, cairo_path_t *sub_path) {
@@ -373,17 +375,13 @@ void sb_append_subpath(sb_path_t *path, cairo_path_t *sub_path) {
   path->occupied++;
 }
 
-// keeps previous cairo path
 cairo_path_t *sb_to_cairo(cairo_t *cr, sb_path_t *sb_path) {
-  cairo_path_t *old_path = cairo_copy_path(cr);
   cairo_new_path(cr);
   for (int i = 0; i < sb_path->occupied; ++i) {
     cairo_append_path(cr, &sb_path->sub_paths[i]);
   }
 
   cairo_path_t *generated_path = cairo_copy_path(cr);
-  cairo_new_path(cr);
-  cairo_append_path(cr, old_path);
   return generated_path;
 }
 
@@ -444,12 +442,13 @@ int main() {
         cairo_set_line_cap(board->canvas, CAIRO_LINE_CAP_ROUND);
         cairo_set_line_join(board->canvas, CAIRO_LINE_JOIN_ROUND);
         reset_sb_points_vec(&current_stroke);
-        reset_sb_path(&sb_path);
+        free_sb_path(&sb_path);
         sb_append_points_vec(&current_stroke, point);
         cairo_move_to(board->canvas, point.x, point.y);
         cairo_arc(board->canvas, mouse_x, mouse_y, 0, 0, TAU);
         cairo_path_t *point_path = cairo_copy_path(board->canvas);
         sb_append_subpath(&sb_path, point_path);
+        free(point_path);
         cairo_stroke(board->canvas);
         SDL_Rect bounds = {
             .x = point.x - LINE_WIDTH,
@@ -463,6 +462,7 @@ int main() {
         is_drawing = false;
         cairo_path_t *cr_path = sb_to_cairo(board->canvas, &sb_path);
         sb_append_subpath(&all_strokes, cr_path);
+        free(cr_path);
       } break;
       case SDL_MOUSEMOTION: {
         if (is_drawing == false) {
@@ -509,6 +509,7 @@ int main() {
 
         cairo_path_t *subpath = cairo_copy_path(board->canvas);
         sb_append_subpath(&sb_path, subpath);
+        free(subpath);
         SDL_Rect bounds = get_path_bounding_area(board->canvas);
         cairo_stroke(board->canvas);
         render_board(board, &bounds);
@@ -521,6 +522,7 @@ int main() {
             break;
           }
           all_strokes.occupied--;
+          free(all_strokes.sub_paths[all_strokes.occupied].data);
           clear_board(board);
           cairo_set_source_rgba(board->canvas, 0, 0, 0, 1.0);
           cairo_set_line_width(board->canvas, LINE_WIDTH);
@@ -539,6 +541,9 @@ int main() {
     }
     SDL_Delay(1000 / 60);
   }
+  free_sb_points_vec(&current_stroke);
+  free_sb_path(&all_strokes);
+  free_sb_path(&sb_path);
   free_board(board);
   SDL_Quit();
 }
