@@ -114,6 +114,9 @@ int main() {
           create_handle_triple(origin, dest, next, h1, h2);
           cairo_move_to(board->cr, origin->x, origin->y);
           cairo_curve_to(board->cr, h1->x, h1->y, h2->x, h2->y, dest->x, dest->y);
+
+          point_free(h1);
+          point_free(h2);
         } break;
         default: {
           size_t last_index = current_stroke->length - 1;
@@ -124,9 +127,13 @@ int main() {
 
           Point *h1 = point_create(0, 0);
           Point *h2 = point_create(0, 0);
+
           create_handle_quad(prev, origin, dest, next, h1, h2);
           cairo_move_to(board->cr, origin->x, origin->y);
           cairo_curve_to(board->cr, h1->x, h1->y, h2->x, h2->y, dest->x, dest->y);
+
+          point_free(h1);
+          point_free(h2);
         } break;
         }
 
