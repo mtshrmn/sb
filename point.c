@@ -11,7 +11,6 @@ Point *point_create(double x, double y) {
 }
 
 void point_free(Point *p) {
-  // TODO: fix clang format to deny one line functions
   free(p);
 }
 
