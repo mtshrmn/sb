@@ -37,6 +37,10 @@ Point point_multiply(Point p, double scalar) {
 
 Point point_normalize(Point p) {
   double length = point_length(p);
+  if (length == 0) {
+    // point is (0,0), don't normalize it.
+    return p;
+  }
   return point_multiply(p, 1.0 / length);
 }
 
