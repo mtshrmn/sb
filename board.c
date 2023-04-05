@@ -74,6 +74,8 @@ Board *board_create(int width, int height) {
   board->current_stroke_points = current_stroke_points;
   board->current_stroke_paths = current_stroke_paths;
   board->strokes = strokes;
+  board->dx = 0;
+  board->dy = 0;
   return board;
 
 defer:
@@ -158,6 +160,8 @@ void board_resize_surface(Board *board) {
     board->cr = canvas;
   }
 
+  // cairo canvas (cr) is recreated so we need to update its translation.
+  cairo_translate(board->cr, board->dx, board->dy);
   cairo_set_source_surface(board->cr, cr_surface, 0, 0);
   cairo_paint(board->cr);
 }
@@ -211,4 +215,21 @@ void board_draw_strokes(Board *board) {
     cairo_append_path(board->cr, path);
   }
   cairo_stroke(board->cr);
+}
+
+void board_translate(Board *board, double dx, double dy) {
+  if (dx == 0 && dy == 0) {
+    return;
+  }
+  board->dx += dx;
+  board->dy += dy;
+  cairo_translate(board->cr, dx, dy);
+  // redraw board with new translation
+  board_clear(board);
+  board_draw_strokes(board);
+  board_render(board, NULL);
+}
+
+void board_reset_translation(Board *board) {
+  board_translate(board, -board->dx, -board->dy);
 }

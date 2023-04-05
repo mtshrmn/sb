@@ -1,10 +1,14 @@
 #include "board.h"
 #include "point.h"
 #include "vector.h"
+#include <SDL2/SDL_events.h>
 #include <stdbool.h>
 
 #define TAU 6.28318530718
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define BOUNDS_PADDING 3
+#define FPS 60
+#define FPS_DURATION (1000 / FPS)
 
 cairo_path_t *merge_paths(cairo_t *cr, Vector *paths) {
   // assume paths->type == VECTOR_PATHS
@@ -18,29 +22,35 @@ cairo_path_t *merge_paths(cairo_t *cr, Vector *paths) {
   return merged_path;
 }
 
-SDL_Rect get_path_bounding_area(cairo_t *cr) {
-  double x1;
-  double y1;
-  double x2;
-  double y2;
-  cairo_stroke_extents(cr, &x1, &y1, &x2, &y2);
-  int x = (int)(x1 - 3);
-  int y = (int)(y1 - 3);
-  int w = (int)(x2 - x + 3);
-  int h = (int)(y2 - y + 3);
+SDL_Rect get_path_bounding_area(Board *board) {
+  double x1, y1, x2, y2;
+  cairo_stroke_extents(board->cr, &x1, &y1, &x2, &y2);
+  int x = x1 + board->dx - BOUNDS_PADDING;
+  int y = y1 + board->dy - BOUNDS_PADDING;
+  int w = x2 - x1 + 2 * BOUNDS_PADDING;
+  int h = y2 - y1 + 2 * BOUNDS_PADDING;
   SDL_Rect area = {.x = MAX(0, x), .y = MAX(0, y), .w = w, .h = h};
   return area;
+}
+
+void get_mousestate(Board *board, double *x, double *y) {
+  int raw_x, raw_y;
+  SDL_GetMouseState(&raw_x, &raw_y);
+  *x = raw_x - board->dx;
+  *y = raw_y - board->dy;
 }
 
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
   Board *board = board_create(600, 480);
   bool running = true;
-  bool is_drawing = false;
-  int mouse_x, mouse_y;
+  double mouse_x, mouse_y;
+  // used for evaluating fps
+  Uint32 start, loop_duration;
 
   while (running) {
     SDL_Event event;
+    start = SDL_GetTicks();
     while (SDL_PollEvent(&event)) {
       switch (event.type) {
       case SDL_QUIT:
@@ -55,37 +65,84 @@ int main() {
         }
       } break;
       case SDL_MOUSEBUTTONDOWN: {
-        is_drawing = true;
-        SDL_GetMouseState(&mouse_x, &mouse_y);
-        vector_reset(board->current_stroke_points);
-        vector_reset(board->current_stroke_paths);
-        Point *current_pos = point_create(mouse_x, mouse_y);
-        vector_append(board->current_stroke_points, current_pos);
-        board_setup_draw(board);
-        cairo_move_to(board->cr, mouse_x, mouse_y);
-        cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, TAU);
-        cairo_path_t *point_path = cairo_copy_path(board->cr);
-        vector_append(board->current_stroke_paths, point_path);
-        cairo_stroke(board->cr);
-        SDL_Rect bounds = {
-            .x = mouse_x - LINE_WIDTH,
-            .y = mouse_y - LINE_WIDTH,
-            .w = 2 * LINE_WIDTH,
-            .h = 2 * LINE_WIDTH,
-        };
-        board_render(board, &bounds);
-      } break;
-      case SDL_MOUSEBUTTONUP: {
-        is_drawing = false;
-        cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
-        vector_append(board->strokes, stroke);
-      } break;
-      case SDL_MOUSEMOTION: {
-        if (is_drawing == false) {
+        if (event.button.button == SDL_BUTTON_LEFT) {
+          if (board->state != STATE_IDLE) {
+            break;
+          }
+          board->state = STATE_DRAWING;
+          get_mousestate(board, &mouse_x, &mouse_y);
+          vector_reset(board->current_stroke_points);
+          vector_reset(board->current_stroke_paths);
+          Point *current_pos = point_create(mouse_x, mouse_y);
+          vector_append(board->current_stroke_points, current_pos);
+          board_setup_draw(board);
+          cairo_move_to(board->cr, mouse_x, mouse_y);
+          cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, TAU);
+          cairo_path_t *point_path = cairo_copy_path(board->cr);
+          vector_append(board->current_stroke_paths, point_path);
+          cairo_stroke(board->cr);
+          SDL_Rect bounds = {
+              .x = mouse_x + board->dx - LINE_WIDTH,
+              .y = mouse_y + board->dy - LINE_WIDTH,
+              .w = 2 * LINE_WIDTH,
+              .h = 2 * LINE_WIDTH,
+          };
+          board_render(board, &bounds);
           break;
         }
 
-        SDL_GetMouseState(&mouse_x, &mouse_y);
+        if (event.button.button == SDL_BUTTON_RIGHT) {
+          if (board->state != STATE_IDLE) {
+            break;
+          }
+          get_mousestate(board, &mouse_x, &mouse_y);
+          // raw mouse position
+          mouse_x += board->dx;
+          mouse_y += board->dy;
+          board->state = STATE_MOVING;
+          break;
+        }
+      } break;
+      case SDL_MOUSEBUTTONUP: {
+        if (event.button.button == SDL_BUTTON_LEFT) {
+          if (board->state != STATE_DRAWING) {
+            break;
+          }
+          board->state = STATE_IDLE;
+          cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
+          vector_append(board->strokes, stroke);
+          break;
+        }
+
+        if (event.button.button == SDL_BUTTON_RIGHT) {
+          if (board->state != STATE_MOVING) {
+            break;
+          }
+          board->state = STATE_IDLE;
+          break;
+        }
+      } break;
+      case SDL_MOUSEMOTION: {
+        if (board->state == STATE_IDLE) {
+          break;
+        }
+
+        if (board->state == STATE_MOVING) {
+          // raws
+          double initial_x = mouse_x;
+          double initial_y = mouse_y;
+          get_mousestate(board, &mouse_x, &mouse_y);
+          mouse_x += board->dx;
+          mouse_y += board->dy;
+
+          double dx = mouse_x - initial_x;
+          double dy = mouse_y - initial_y;
+          board_translate(board, dx, dy);
+          break;
+        }
+
+        // it is now guaranteed that board->state == STATE_DRAWING
+        get_mousestate(board, &mouse_x, &mouse_y);
         Point *last_point = vector_top(board->current_stroke_points);
         if (last_point->x == mouse_x && last_point->y == mouse_y) {
           break;
@@ -139,7 +196,7 @@ int main() {
 
         cairo_path_t *sub_path = cairo_copy_path(board->cr);
         vector_append(board->current_stroke_paths, sub_path);
-        SDL_Rect bounds = get_path_bounding_area(board->cr);
+        SDL_Rect bounds = get_path_bounding_area(board);
         cairo_stroke(board->cr);
         board_render(board, &bounds);
       } break;
@@ -147,21 +204,29 @@ int main() {
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
         // ctrl+z -> undo last stroke
         if (keys[SDL_SCANCODE_LCTRL] && keys[SDL_SCANCODE_Z]) {
-          if (board->strokes->length == 0) {
-            break;
+          if (board->strokes->length != 0) {
+            vector_pop(board->strokes);
+            board_clear(board);
+            board_draw_strokes(board);
+            board_render(board, NULL);
           }
+          break;
+        }
 
-          vector_pop(board->strokes);
-          board_clear(board);
-          board_draw_strokes(board);
-          board_render(board, NULL);
+        if (keys[SDL_SCANCODE_EQUALS]) {
+          board_reset_translation(board);
+          break;
         }
       } break;
       default:
         break;
       }
     }
-    SDL_Delay(1000 / 60);
+
+    loop_duration = SDL_GetTicks() - start;
+    if (loop_duration <= FPS_DURATION) {
+      SDL_Delay(FPS_DURATION - loop_duration);
+    }
   }
 
   board_free(board);
