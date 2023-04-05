@@ -76,6 +76,7 @@ Board *board_create(int width, int height) {
   board->strokes = strokes;
   board->dx = 0;
   board->dy = 0;
+  board->state = STATE_IDLE;
   return board;
 
 defer:
