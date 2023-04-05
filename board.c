@@ -47,7 +47,7 @@ Board *board_create(int width, int height) {
 
   cairo_t *canvas = cairo_create(cr_surface);
 
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+  SDL_SetRenderDrawColor(renderer, BOARD_BG);
   SDL_RenderClear(renderer);
 
   if (canvas == NULL)
@@ -203,7 +203,7 @@ void board_render(Board *board, SDL_Rect *update_area) {
 }
 
 void board_setup_draw(Board *board) {
-  cairo_set_source_rgba(board->cr, 0, 0, 0, 1.0);
+  cairo_set_source_rgba(board->cr, BOARD_FG);
   cairo_set_line_width(board->cr, LINE_WIDTH);
   cairo_set_line_cap(board->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(board->cr, CAIRO_LINE_JOIN_ROUND);
