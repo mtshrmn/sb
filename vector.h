@@ -8,6 +8,7 @@
 typedef enum VectorType {
   VECTOR_POINTS,
   VECTOR_PATHS,
+  VECTOR_COLORED_PATHS,
 } VectorType;
 
 typedef struct Vector {

@@ -1,4 +1,5 @@
 #include "board.h"
+#include "path.h"
 
 Board *board_create(int width, int height) {
   Board *board = malloc(sizeof(Board));
@@ -59,7 +60,7 @@ Board *board_create(int width, int height) {
   Vector *current_stroke_paths = vector_create(VECTOR_PATHS);
   if (current_stroke_paths == NULL)
     goto defer;
-  Vector *strokes = vector_create(VECTOR_PATHS);
+  Vector *strokes = vector_create(VECTOR_COLORED_PATHS);
   if (strokes == NULL)
     goto defer;
 
@@ -203,7 +204,6 @@ void board_render(Board *board, SDL_Rect *update_area) {
 }
 
 void board_setup_draw(Board *board) {
-  cairo_set_source_rgba(board->cr, BOARD_FG);
   cairo_set_line_width(board->cr, LINE_WIDTH);
   cairo_set_line_cap(board->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(board->cr, CAIRO_LINE_JOIN_ROUND);
@@ -212,10 +212,13 @@ void board_setup_draw(Board *board) {
 void board_draw_strokes(Board *board) {
   board_setup_draw(board);
   for (int i = 0; i < board->strokes->length; ++i) {
-    cairo_path_t *path = vector_get(board->strokes, i);
-    cairo_append_path(board->cr, path);
+    Path *path = vector_get(board->strokes, i);
+    double r, g, b, a;
+    extract_color(path->color, &r, &g, &b, &a);
+    cairo_set_source_rgba(board->cr, r, g, b, a);
+    cairo_append_path(board->cr, path->path);
+    cairo_stroke(board->cr);
   }
-  cairo_stroke(board->cr);
 }
 
 void board_translate(Board *board, double dx, double dy) {
@@ -233,4 +236,10 @@ void board_translate(Board *board, double dx, double dy) {
 
 void board_reset_translation(Board *board) {
   board_translate(board, -board->dx, -board->dy);
+}
+
+void board_refresh(Board *board) {
+  board_clear(board);
+  board_draw_strokes(board);
+  board_render(board, NULL);
 }

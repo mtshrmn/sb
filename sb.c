@@ -1,4 +1,5 @@
 #include "board.h"
+#include "path.h"
 #include "point.h"
 #include "vector.h"
 #include <SDL2/SDL_events.h>
@@ -9,6 +10,10 @@
 #define BOUNDS_PADDING 3
 #define FPS 60
 #define FPS_DURATION (1000 / FPS)
+
+// color definitions
+#define BLACK 0x000000FF
+#define RED 0xFF0000FF
 
 cairo_path_t *merge_paths(cairo_t *cr, Vector *paths) {
   // assume paths->type == VECTOR_PATHS
@@ -45,6 +50,7 @@ int main() {
   Board *board = board_create(600, 480);
   bool running = true;
   double mouse_x, mouse_y;
+  unsigned int stroke_color = BLACK;
   // used for evaluating fps
   Uint32 start, loop_duration;
 
@@ -59,16 +65,15 @@ int main() {
       case SDL_WINDOWEVENT: {
         if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
           board_resize_surface(board);
-          board_clear(board);
-          board_draw_strokes(board);
-          board_render(board, NULL);
+          board_refresh(board);
         }
       } break;
       case SDL_MOUSEBUTTONDOWN: {
+        if (board->state != STATE_IDLE) {
+          break;
+        }
+
         if (event.button.button == SDL_BUTTON_LEFT) {
-          if (board->state != STATE_IDLE) {
-            break;
-          }
           board->state = STATE_DRAWING;
           get_mousestate(board, &mouse_x, &mouse_y);
           vector_reset(board->current_stroke_points);
@@ -76,6 +81,9 @@ int main() {
           Point *current_pos = point_create(mouse_x, mouse_y);
           vector_append(board->current_stroke_points, current_pos);
           board_setup_draw(board);
+          double r, g, b, a;
+          extract_color(stroke_color, &r, &g, &b, &a);
+          cairo_set_source_rgba(board->cr, r, g, b, a);
           cairo_move_to(board->cr, mouse_x, mouse_y);
           cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, TAU);
           cairo_path_t *point_path = cairo_copy_path(board->cr);
@@ -92,9 +100,6 @@ int main() {
         }
 
         if (event.button.button == SDL_BUTTON_RIGHT) {
-          if (board->state != STATE_IDLE) {
-            break;
-          }
           get_mousestate(board, &mouse_x, &mouse_y);
           // raw mouse position
           mouse_x += board->dx;
@@ -110,7 +115,8 @@ int main() {
           }
           board->state = STATE_IDLE;
           cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
-          vector_append(board->strokes, stroke);
+          Path *colored_stroke = path_create(stroke, stroke_color);
+          vector_append(board->strokes, colored_stroke);
           break;
         }
 
@@ -206,15 +212,25 @@ int main() {
         if (keys[SDL_SCANCODE_LCTRL] && keys[SDL_SCANCODE_Z]) {
           if (board->strokes->length != 0) {
             vector_pop(board->strokes);
-            board_clear(board);
-            board_draw_strokes(board);
-            board_render(board, NULL);
+            board_refresh(board);
           }
           break;
         }
 
         if (keys[SDL_SCANCODE_EQUALS]) {
           board_reset_translation(board);
+          break;
+        }
+
+        if (keys[SDL_SCANCODE_1]) {
+          stroke_color = BLACK;
+          board_refresh(board);
+          break;
+        }
+
+        if (keys[SDL_SCANCODE_2]) {
+          stroke_color = RED;
+          board_refresh(board);
           break;
         }
       } break;

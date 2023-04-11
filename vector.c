@@ -1,4 +1,5 @@
 #include "vector.h"
+#include "path.h"
 #include "point.h"
 #include <cairo/cairo.h>
 #include <stdio.h>
@@ -26,6 +27,11 @@ void vector_reset(Vector *vec) {
     for (int i = 0; i < vec->length; ++i) {
       Point *point = vector_get(vec, i);
       point_free(point);
+    }
+  } else if (vec->type == VECTOR_COLORED_PATHS) {
+    for (int i = 0; i < vec->length; ++i) {
+      Path *path = vector_get(vec, i);
+      path_free(path);
     }
   } else { // data is of type cairo_path_t
     for (int i = 0; i < vec->length; ++i) {
@@ -62,6 +68,8 @@ void vector_pop(Vector *vec) {
   void *last_item = vector_top(vec);
   if (vec->type == VECTOR_POINTS) {
     free(last_item);
+  } else if (vec->type == VECTOR_COLORED_PATHS) {
+    path_free(last_item);
   } else { // data is of type cairo_path_t
     cairo_path_destroy(last_item);
   }

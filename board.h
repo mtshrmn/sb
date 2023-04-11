@@ -9,7 +9,6 @@
 
 // r, g, b, a
 #define BOARD_BG 1, 1, 1, 1.0
-#define BOARD_FG 0, 0, 0, 1.0
 #define LINE_WIDTH 3.0
 
 typedef enum BoardState {
@@ -35,7 +34,7 @@ typedef struct Board {
 
   Vector *current_stroke_points; // contains Point
   Vector *current_stroke_paths;  // contains cairo_path_t
-  Vector *strokes;               // contains cairo_path_t
+  Vector *strokes;               // contains Path
   BoardState state;
 } Board;
 
@@ -48,5 +47,6 @@ void board_setup_draw(Board *board);
 void board_draw_strokes(Board *board);
 void board_translate(Board *board, double dx, double dy);
 void board_reset_translation(Board *board);
+void board_refresh(Board *board);
 
 #endif // SB_BOARD_H
