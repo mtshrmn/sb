@@ -22,6 +22,8 @@ typedef struct Board {
   SDL_Renderer *renderer;
   SDL_Surface *sdl_surface;
   SDL_Texture *sdl_texture;
+  SDL_Surface *cursor_surface;
+  SDL_Cursor *cursor;
 
   cairo_surface_t *cr_surface;
   cairo_t *cr;
@@ -48,5 +50,5 @@ void board_draw_strokes(Board *board);
 void board_translate(Board *board, double dx, double dy);
 void board_reset_translation(Board *board);
 void board_refresh(Board *board);
-
+void board_update_cursor(Board *board, unsigned int color);
 #endif // SB_BOARD_H

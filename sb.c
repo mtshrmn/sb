@@ -5,15 +5,14 @@
 #include <SDL2/SDL_events.h>
 #include <stdbool.h>
 
-#define TAU 6.28318530718
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define BOUNDS_PADDING 3
 #define FPS 60
 #define FPS_DURATION (1000 / FPS)
 
-// color definitions
-#define BLACK 0x000000FF
-#define RED 0xFF0000FF
+// color definitions (0xAARRGGBB)
+#define BLACK 0xFF000000
+#define RED 0xFFFF0000
 
 cairo_path_t *merge_paths(cairo_t *cr, Vector *paths) {
   // assume paths->type == VECTOR_PATHS
@@ -50,6 +49,7 @@ int main() {
   Board *board = board_create(600, 480);
   bool running = true;
   double mouse_x, mouse_y;
+  board_update_cursor(board, BLACK);
   unsigned int stroke_color = BLACK;
   // used for evaluating fps
   Uint32 start, loop_duration;
@@ -81,11 +81,11 @@ int main() {
           Point *current_pos = point_create(mouse_x, mouse_y);
           vector_append(board->current_stroke_points, current_pos);
           board_setup_draw(board);
-          double r, g, b, a;
-          extract_color(stroke_color, &r, &g, &b, &a);
+          Uint8 r, g, b, a;
+          SDL_GetRGBA(stroke_color, board->sdl_surface->format, &r, &g, &b, &a);
           cairo_set_source_rgba(board->cr, r, g, b, a);
           cairo_move_to(board->cr, mouse_x, mouse_y);
-          cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, TAU);
+          cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, M_PI * 2);
           cairo_path_t *point_path = cairo_copy_path(board->cr);
           vector_append(board->current_stroke_paths, point_path);
           cairo_stroke(board->cr);
@@ -224,12 +224,14 @@ int main() {
 
         if (keys[SDL_SCANCODE_1]) {
           stroke_color = BLACK;
+          board_update_cursor(board, stroke_color);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_2]) {
           stroke_color = RED;
+          board_update_cursor(board, stroke_color);
           board_refresh(board);
           break;
         }

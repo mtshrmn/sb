@@ -10,5 +10,4 @@ typedef struct {
 
 Path *path_create(cairo_path_t *path, unsigned int color);
 void path_free(Path *path);
-void extract_color(unsigned int color, double *r, double *g, double *b, double *a);
 #endif
