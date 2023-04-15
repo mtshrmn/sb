@@ -46,8 +46,7 @@ Board *board_create(int width, int height) {
   if (cursor == NULL)
     goto defer;
 
-  cairo_surface_t *cr_surface = cairo_image_surface_create_for_data(
-      (unsigned char *)sdl_surface->pixels, CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h, sdl_surface->pitch);
+  cairo_surface_t *cr_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h);
 
   if (cr_surface == NULL)
     goto defer;
