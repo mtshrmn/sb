@@ -121,6 +121,7 @@ int main() {
           }
           board->state = STATE_IDLE;
           cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
+          cairo_new_path(board->cr);
           Path *colored_stroke = path_create(stroke, stroke_color, stroke_width);
           vector_append(board->strokes, colored_stroke);
           break;
