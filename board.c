@@ -229,10 +229,7 @@ void board_translate(Board *board, double dx, double dy) {
   board->dx += dx;
   board->dy += dy;
   cairo_translate(board->cr, dx, dy);
-  // redraw board with new translation
-  board_clear(board);
-  board_draw_strokes(board);
-  board_render(board, NULL);
+  board_refresh(board);
 }
 
 void board_reset_translation(Board *board) {
