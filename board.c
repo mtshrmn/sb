@@ -212,6 +212,7 @@ void board_setup_draw(Board *board) {
 void board_draw_strokes(Board *board) {
   board_setup_draw(board);
   for (int i = 0; i < board->strokes->length; ++i) {
+    cairo_new_path(board->cr);
     Path *path = vector_get(board->strokes, i);
     Uint8 r, g, b, a;
     SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
