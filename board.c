@@ -216,7 +216,7 @@ void board_draw_strokes(Board *board) {
     Path *path = vector_get(board->strokes, i);
     Uint8 r, g, b, a;
     SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
-    cairo_set_source_rgba(board->cr, r, g, b, a);
+    cairo_set_source_rgba(board->cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
     cairo_set_line_width(board->cr, path->width);
     cairo_append_path(board->cr, path->path);
     cairo_stroke(board->cr);
@@ -261,7 +261,7 @@ void board_update_cursor(Board *board, unsigned int color, double width) {
 
   Uint8 r, g, b, a;
   SDL_GetRGBA(color, cursor_surface->format, &r, &g, &b, &a);
-  cairo_set_source_rgba(cr, r, g, b, a);
+  cairo_set_source_rgba(board->cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
 
   cairo_set_line_width(cr, width);
   cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);

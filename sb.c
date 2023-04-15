@@ -88,7 +88,7 @@ int main() {
           board_setup_draw(board);
           Uint8 r, g, b, a;
           SDL_GetRGBA(stroke_color, board->sdl_surface->format, &r, &g, &b, &a);
-          cairo_set_source_rgba(board->cr, r, g, b, a);
+          cairo_set_source_rgba(board->cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
           cairo_set_line_width(board->cr, stroke_width);
           cairo_move_to(board->cr, mouse_x, mouse_y);
           cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, M_PI * 2);
