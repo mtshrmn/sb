@@ -9,7 +9,6 @@
 
 // r, g, b, a
 #define BOARD_BG 1, 1, 1, 1.0
-#define LINE_WIDTH 3.0
 
 typedef enum BoardState {
   STATE_IDLE,
@@ -22,7 +21,6 @@ typedef struct Board {
   SDL_Renderer *renderer;
   SDL_Surface *sdl_surface;
   SDL_Texture *sdl_texture;
-  SDL_Surface *cursor_surface;
   SDL_Cursor *cursor;
 
   cairo_surface_t *cr_surface;
@@ -50,5 +48,5 @@ void board_draw_strokes(Board *board);
 void board_translate(Board *board, double dx, double dy);
 void board_reset_translation(Board *board);
 void board_refresh(Board *board);
-void board_update_cursor(Board *board, unsigned int color);
+void board_update_cursor(Board *board, unsigned int color, double width);
 #endif // SB_BOARD_H

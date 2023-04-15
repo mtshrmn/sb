@@ -36,16 +36,6 @@ Board *board_create(int width, int height) {
   if (sdl_texture == NULL)
     goto defer;
 
-  // SDL_Surface *cursor_surface = SDL_CreateRGBASurface(0, 30, 30, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0);
-  SDL_Surface *cursor_surface =
-      SDL_CreateRGBSurfaceWithFormat(0, LINE_WIDTH * 2, LINE_WIDTH * 2, 32, SDL_PIXELFORMAT_RGBA32);
-  if (cursor_surface == NULL)
-    goto defer;
-
-  SDL_Cursor *cursor = SDL_CreateColorCursor(cursor_surface, LINE_WIDTH, LINE_WIDTH);
-  if (cursor == NULL)
-    goto defer;
-
   cairo_surface_t *cr_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h);
 
   if (cr_surface == NULL)
@@ -76,8 +66,7 @@ Board *board_create(int width, int height) {
   board->window = window;
   board->renderer = renderer;
   board->sdl_surface = sdl_surface;
-  board->cursor_surface = cursor_surface;
-  board->cursor = cursor;
+  board->cursor = NULL;
   board->sdl_texture = sdl_texture;
   board->cr_surface = cr_surface;
   board->cr = canvas;
@@ -100,10 +89,6 @@ defer:
     cairo_surface_destroy(cr_surface);
   if (sdl_texture != NULL)
     SDL_DestroyTexture(sdl_texture);
-  if (cursor != NULL)
-    SDL_FreeCursor(cursor);
-  if (cursor_surface != NULL)
-    SDL_FreeSurface(cursor_surface);
   if (sdl_surface != NULL)
     SDL_FreeSurface(sdl_surface);
   if (renderer != NULL)
@@ -127,7 +112,6 @@ void board_free(Board *board) {
   cairo_destroy(board->cr);
   cairo_surface_destroy(board->cr_surface);
   SDL_FreeCursor(board->cursor);
-  SDL_FreeSurface(board->cursor_surface);
   SDL_DestroyTexture(board->sdl_texture);
   SDL_FreeSurface(board->sdl_surface);
   SDL_DestroyRenderer(board->renderer);
@@ -221,7 +205,6 @@ void board_render(Board *board, SDL_Rect *update_area) {
 }
 
 void board_setup_draw(Board *board) {
-  cairo_set_line_width(board->cr, LINE_WIDTH);
   cairo_set_line_cap(board->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(board->cr, CAIRO_LINE_JOIN_ROUND);
 }
@@ -233,6 +216,7 @@ void board_draw_strokes(Board *board) {
     Uint8 r, g, b, a;
     SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
     cairo_set_source_rgba(board->cr, r, g, b, a);
+    cairo_set_line_width(board->cr, path->width);
     cairo_append_path(board->cr, path->path);
     cairo_stroke(board->cr);
   }
@@ -261,14 +245,17 @@ void board_refresh(Board *board) {
   board_render(board, NULL);
 }
 
-void board_update_cursor(Board *board, unsigned int color) {
-  Uint32 start = SDL_GetTicks();
+void board_update_cursor(Board *board, unsigned int color, double width) {
+  SDL_Surface *cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, width * 2, width * 2, 32, SDL_PIXELFORMAT_RGBA32);
+  if (cursor_surface == NULL) {
+    return;
+  }
+
   // motivation:
   // 1. create a cairo instance
   // 2. draw an anti aliased circle
   // 3. copy it to the cursor surface
   // 4. delete the cairo instance.
-  SDL_Surface *cursor_surface = board->cursor_surface;
   double w = cursor_surface->w;
   double h = cursor_surface->h;
   cairo_surface_t *cr_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, w, h);
@@ -278,7 +265,7 @@ void board_update_cursor(Board *board, unsigned int color) {
   SDL_GetRGBA(color, cursor_surface->format, &r, &g, &b, &a);
   cairo_set_source_rgba(cr, r, g, b, a);
 
-  cairo_set_line_width(cr, LINE_WIDTH);
+  cairo_set_line_width(cr, width);
   cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
 
@@ -289,10 +276,10 @@ void board_update_cursor(Board *board, unsigned int color) {
 
   // render to sdl surface
   unsigned char *data = cairo_image_surface_get_data(cr_surface);
-  Uint32 *cursor_surface_pixels = board->cursor_surface->pixels;
+  Uint32 *cursor_surface_pixels = cursor_surface->pixels;
   memcpy(cursor_surface_pixels, data, w * h * 4);
 
-  SDL_Cursor *new_cursor = SDL_CreateColorCursor(board->cursor_surface, w / 2, h / 2);
+  SDL_Cursor *new_cursor = SDL_CreateColorCursor(cursor_surface, w / 2, h / 2);
   if (new_cursor != NULL) {
     SDL_Cursor *temp_cursor = board->cursor;
     board->cursor = new_cursor;
@@ -302,4 +289,5 @@ void board_update_cursor(Board *board, unsigned int color) {
 
   cairo_destroy(cr);
   cairo_surface_destroy(cr_surface);
+  SDL_FreeSurface(cursor_surface);
 }

@@ -14,6 +14,10 @@
 #define BLACK 0xFF000000
 #define RED 0xFFFF0000
 
+#define STROKE_WIDTH_THIN 1.5
+#define STROKE_WIDTH_MEDIUM 3.0
+#define STROKE_WIDTH_THICK 6.0
+
 cairo_path_t *merge_paths(cairo_t *cr, Vector *paths) {
   // assume paths->type == VECTOR_PATHS
   cairo_new_path(cr);
@@ -49,8 +53,9 @@ int main() {
   Board *board = board_create(600, 480);
   bool running = true;
   double mouse_x, mouse_y;
-  board_update_cursor(board, BLACK);
   unsigned int stroke_color = BLACK;
+  double stroke_width = 3.0;
+  board_update_cursor(board, stroke_color, stroke_width);
   // used for evaluating fps
   Uint32 start, loop_duration;
 
@@ -84,16 +89,17 @@ int main() {
           Uint8 r, g, b, a;
           SDL_GetRGBA(stroke_color, board->sdl_surface->format, &r, &g, &b, &a);
           cairo_set_source_rgba(board->cr, r, g, b, a);
+          cairo_set_line_width(board->cr, stroke_width);
           cairo_move_to(board->cr, mouse_x, mouse_y);
           cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, M_PI * 2);
           cairo_path_t *point_path = cairo_copy_path(board->cr);
           vector_append(board->current_stroke_paths, point_path);
           cairo_stroke(board->cr);
           SDL_Rect bounds = {
-              .x = mouse_x + board->dx - LINE_WIDTH,
-              .y = mouse_y + board->dy - LINE_WIDTH,
-              .w = 2 * LINE_WIDTH,
-              .h = 2 * LINE_WIDTH,
+              .x = mouse_x + board->dx - stroke_width,
+              .y = mouse_y + board->dy - stroke_width,
+              .w = 2 * stroke_width,
+              .h = 2 * stroke_width,
           };
           board_render(board, &bounds);
           break;
@@ -115,7 +121,7 @@ int main() {
           }
           board->state = STATE_IDLE;
           cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
-          Path *colored_stroke = path_create(stroke, stroke_color);
+          Path *colored_stroke = path_create(stroke, stroke_color, stroke_width);
           vector_append(board->strokes, colored_stroke);
           break;
         }
@@ -217,21 +223,42 @@ int main() {
           break;
         }
 
-        if (keys[SDL_SCANCODE_EQUALS]) {
+        if (keys[SDL_SCANCODE_0]) {
           board_reset_translation(board);
           break;
         }
 
-        if (keys[SDL_SCANCODE_1]) {
+        if (keys[SDL_SCANCODE_MINUS]) {
           stroke_color = BLACK;
-          board_update_cursor(board, stroke_color);
+          board_update_cursor(board, stroke_color, stroke_width);
+          board_refresh(board);
+          break;
+        }
+
+        if (keys[SDL_SCANCODE_EQUALS]) {
+          stroke_color = RED;
+          board_update_cursor(board, stroke_color, stroke_width);
+          board_refresh(board);
+          break;
+        }
+
+        if (keys[SDL_SCANCODE_1]) {
+          stroke_width = STROKE_WIDTH_THIN;
+          board_update_cursor(board, stroke_color, stroke_width);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_2]) {
-          stroke_color = RED;
-          board_update_cursor(board, stroke_color);
+          stroke_width = STROKE_WIDTH_MEDIUM;
+          board_update_cursor(board, stroke_color, stroke_width);
+          board_refresh(board);
+          break;
+        }
+
+        if (keys[SDL_SCANCODE_3]) {
+          stroke_width = STROKE_WIDTH_THICK;
+          board_update_cursor(board, stroke_color, stroke_width);
           board_refresh(board);
           break;
         }

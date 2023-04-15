@@ -1,7 +1,7 @@
 #include "path.h"
 #include <stdlib.h>
 
-Path *path_create(cairo_path_t *path, unsigned int color) {
+Path *path_create(cairo_path_t *path, unsigned int color, double width) {
   Path *p = malloc(sizeof(Path));
   if (p == NULL) {
     return NULL;
@@ -9,6 +9,7 @@ Path *path_create(cairo_path_t *path, unsigned int color) {
 
   p->path = path;
   p->color = color;
+  p->width = width;
   return p;
 }
 
