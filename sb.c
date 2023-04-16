@@ -54,7 +54,7 @@ int main() {
   bool running = true;
   double mouse_x, mouse_y;
   unsigned int stroke_color = BLACK;
-  double stroke_width = 3.0;
+  double stroke_width = STROKE_WIDTH_MEDIUM;
   board_update_cursor(board, stroke_color, stroke_width);
   // used for evaluating fps
   Uint32 start, loop_duration;
