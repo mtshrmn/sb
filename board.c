@@ -77,6 +77,8 @@ Board *board_create(int width, int height) {
   board->strokes = strokes;
   board->dx = 0;
   board->dy = 0;
+  board->stroke_width = STROKE_WIDTH_MEDIUM;
+  board->stroke_color = BLACK;
   board->state = STATE_IDLE;
   return board;
 
@@ -243,7 +245,8 @@ void board_refresh(Board *board) {
   board_render(board, NULL);
 }
 
-void board_update_cursor(Board *board, unsigned int color, double width) {
+void board_update_cursor(Board *board) {
+  double width = board->stroke_width;
   SDL_Surface *cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, width * 2, width * 2, 32, SDL_PIXELFORMAT_RGBA32);
   if (cursor_surface == NULL) {
     return;
@@ -260,7 +263,7 @@ void board_update_cursor(Board *board, unsigned int color, double width) {
   cairo_t *cr = cairo_create(cr_surface);
 
   Uint8 r, g, b, a;
-  SDL_GetRGBA(color, cursor_surface->format, &r, &g, &b, &a);
+  SDL_GetRGBA(board->stroke_color, cursor_surface->format, &r, &g, &b, &a);
   cairo_set_source_rgba(cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
 
   cairo_set_line_width(cr, width);

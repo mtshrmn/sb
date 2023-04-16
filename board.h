@@ -10,6 +10,14 @@
 // r, g, b, a
 #define BOARD_BG 1, 1, 1, 1.0
 
+// color definitions (0xAARRGGBB)
+#define BLACK 0xFF000000
+#define RED 0xFFFF0000
+
+#define STROKE_WIDTH_THIN 1.5
+#define STROKE_WIDTH_MEDIUM 3.0
+#define STROKE_WIDTH_THICK 6.0
+
 typedef enum BoardState {
   STATE_IDLE,
   STATE_DRAWING,
@@ -32,6 +40,9 @@ typedef struct Board {
   double dx;
   double dy;
 
+  double stroke_width;
+  double stroke_color;
+
   Vector *current_stroke_points; // contains Point
   Vector *current_stroke_paths;  // contains cairo_path_t
   Vector *strokes;               // contains Path
@@ -48,5 +59,5 @@ void board_draw_strokes(Board *board);
 void board_translate(Board *board, double dx, double dy);
 void board_reset_translation(Board *board);
 void board_refresh(Board *board);
-void board_update_cursor(Board *board, unsigned int color, double width);
+void board_update_cursor(Board *board);
 #endif // SB_BOARD_H
