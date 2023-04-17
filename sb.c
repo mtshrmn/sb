@@ -279,6 +279,7 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_MINUS]) {
+          board->toolbar->selected_color = COLOR_BLACK;
           board->stroke_color = get_color(COLOR_BLACK);
           board_update_cursor(board);
           board_refresh(board);
@@ -286,6 +287,7 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_EQUALS]) {
+          board->toolbar->selected_color = COLOR_RED;
           board->stroke_color = get_color(COLOR_RED);
           board_update_cursor(board);
           board_refresh(board);
@@ -293,6 +295,7 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_1]) {
+          board->toolbar->selected_width = STROKE_WIDTH_THIN;
           board->stroke_width = get_width(STROKE_WIDTH_THIN);
           board_update_cursor(board);
           board_refresh(board);
@@ -300,6 +303,7 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_2]) {
+          board->toolbar->selected_width = STROKE_WIDTH_MEDIUM;
           board->stroke_width = get_width(STROKE_WIDTH_MEDIUM);
           board_update_cursor(board);
           board_refresh(board);
@@ -307,6 +311,7 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_3]) {
+          board->toolbar->selected_width = STROKE_WIDTH_THICK;
           board->stroke_width = get_width(STROKE_WIDTH_THICK);
           board_update_cursor(board);
           board_refresh(board);
