@@ -40,6 +40,16 @@ void get_mousestate(Board *board, double *x, double *y) {
   *y = raw_y - board->dy;
 }
 
+bool is_inside_rect(SDL_Rect *rect, double x, double y) {
+  if (x <= rect->x || x >= rect->x + rect->w) {
+    return false;
+  }
+  if (y <= rect->y || y >= rect->y + rect->h) {
+    return false;
+  }
+  return true;
+}
+
 int main() {
   SDL_Init(SDL_INIT_VIDEO);
   Board *board = board_create(600, 480);
@@ -69,8 +79,26 @@ int main() {
         }
 
         if (event.button.button == SDL_BUTTON_LEFT) {
-          board->state = STATE_DRAWING;
           get_mousestate(board, &mouse_x, &mouse_y);
+          double raw_x = mouse_x + board->dx;
+          double raw_y = mouse_y + board->dy;
+
+          if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
+            int color, width;
+            toolbar_select_button(board->toolbar, raw_x - board->toolbar_area.x, &width, &color);
+            if (width >= 0) {
+              board->stroke_width = get_width(width);
+            }
+
+            if (color >= 0) {
+              board->stroke_color = get_color(color);
+            }
+            board_update_cursor(board);
+            board_refresh(board);
+            break;
+          }
+
+          board->state = STATE_DRAWING;
           vector_reset(board->current_stroke_points);
           vector_reset(board->current_stroke_paths);
           Point *current_pos = point_create(mouse_x, mouse_y);
@@ -110,6 +138,10 @@ int main() {
             break;
           }
           board->state = STATE_IDLE;
+          if (board->toolbar->visible == false) {
+            board->toolbar->visible = true;
+            board_render(board, &board->toolbar_area);
+          }
           cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
           cairo_new_path(board->cr);
           Path *colored_stroke = path_create(stroke, board->stroke_color, board->stroke_width);
@@ -127,10 +159,21 @@ int main() {
       } break;
       case SDL_MOUSEMOTION: {
         if (board->state == STATE_IDLE) {
+          get_mousestate(board, &mouse_x, &mouse_y);
+          double raw_x = mouse_x + board->dx;
+          double raw_y = mouse_y + board->dy;
+          SDL_ShowCursor(true);
+          if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
+            SDL_SetCursor(board->default_cursor);
+          } else {
+            SDL_SetCursor(board->cursor);
+          }
+
           break;
         }
 
         if (board->state == STATE_MOVING) {
+          SDL_ShowCursor(false);
           // raws
           double initial_x = mouse_x;
           double initial_y = mouse_y;
@@ -145,7 +188,23 @@ int main() {
         }
 
         // it is now guaranteed that board->state == STATE_DRAWING
+        SDL_ShowCursor(true);
         get_mousestate(board, &mouse_x, &mouse_y);
+
+        // determine visibility of the toolbar
+        double raw_x = mouse_x + board->dx;
+        double raw_y = mouse_y + board->dy;
+        bool previous = board->toolbar->visible;
+        if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
+          board->toolbar->visible = false;
+        } else {
+          board->toolbar->visible = true;
+        }
+        // re-render toolbar if needed.
+        if (previous != board->toolbar->visible) {
+          board_render(board, &board->toolbar_area);
+        }
+
         Point *last_point = vector_top(board->current_stroke_points);
         if (last_point->x == mouse_x && last_point->y == mouse_y) {
           break;
@@ -220,35 +279,35 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_MINUS]) {
-          board->stroke_color = BLACK;
+          board->stroke_color = get_color(COLOR_BLACK);
           board_update_cursor(board);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_EQUALS]) {
-          board->stroke_color = RED;
+          board->stroke_color = get_color(COLOR_RED);
           board_update_cursor(board);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_1]) {
-          board->stroke_width = STROKE_WIDTH_THIN;
+          board->stroke_width = get_width(STROKE_WIDTH_THIN);
           board_update_cursor(board);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_2]) {
-          board->stroke_width = STROKE_WIDTH_MEDIUM;
+          board->stroke_width = get_width(STROKE_WIDTH_MEDIUM);
           board_update_cursor(board);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_3]) {
-          board->stroke_width = STROKE_WIDTH_THICK;
+          board->stroke_width = get_width(STROKE_WIDTH_THICK);
           board_update_cursor(board);
           board_refresh(board);
           break;

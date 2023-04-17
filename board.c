@@ -53,6 +53,10 @@ Board *board_create(int width, int height) {
   if (canvas == NULL)
     goto defer;
 
+  SDL_Cursor *default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+  if (default_cursor == NULL)
+    goto defer;
+
   Vector *current_stroke_points = vector_create(VECTOR_POINTS);
   if (current_stroke_points == NULL)
     goto defer;
@@ -63,22 +67,28 @@ Board *board_create(int width, int height) {
   if (strokes == NULL)
     goto defer;
 
+  ToolBar *toolbar = toolbar_create(50, sdl_surface->format);
+  if (toolbar == NULL)
+    goto defer;
+
   board->window = window;
   board->renderer = renderer;
   board->sdl_surface = sdl_surface;
   board->cursor = NULL;
+  board->default_cursor = default_cursor;
   board->sdl_texture = sdl_texture;
   board->cr_surface = cr_surface;
   board->cr = canvas;
   board->width = window_width;
   board->height = window_height;
+  board->toolbar = toolbar;
   board->current_stroke_points = current_stroke_points;
   board->current_stroke_paths = current_stroke_paths;
   board->strokes = strokes;
   board->dx = 0;
   board->dy = 0;
-  board->stroke_width = STROKE_WIDTH_MEDIUM;
-  board->stroke_color = BLACK;
+  board->stroke_width = get_width(toolbar->selected_width);
+  board->stroke_color = get_color(toolbar->selected_color);
   board->state = STATE_IDLE;
   return board;
 
@@ -103,6 +113,10 @@ defer:
     vector_free(current_stroke_paths);
   if (strokes != NULL)
     vector_free(strokes);
+  if (toolbar != NULL)
+    toolbar_free(toolbar);
+  if (default_cursor != NULL)
+    SDL_FreeCursor(default_cursor);
   return NULL;
 }
 
@@ -114,16 +128,19 @@ void board_free(Board *board) {
   cairo_destroy(board->cr);
   cairo_surface_destroy(board->cr_surface);
   SDL_FreeCursor(board->cursor);
+  SDL_FreeCursor(board->default_cursor);
   SDL_DestroyTexture(board->sdl_texture);
   SDL_FreeSurface(board->sdl_surface);
   SDL_DestroyRenderer(board->renderer);
   SDL_DestroyWindow(board->window);
 
+  toolbar_free(board->toolbar);
   free(board);
 }
 
 void board_resize_surface(Board *board) {
   SDL_GetWindowSize(board->window, &board->width, &board->height);
+  board_update_toolbar_area(board);
 
   int renderer_width;
   int renderer_height;
@@ -197,6 +214,15 @@ void board_render(Board *board, SDL_Rect *update_area) {
     data = new_data;
   }
   SDL_UpdateTexture(board->sdl_texture, update_area, data, board->sdl_surface->pitch);
+
+  SDL_Rect result;
+  bool is_intersecting = SDL_IntersectRect(update_area, &board->toolbar_area, &result) == SDL_TRUE;
+  if (board->toolbar->visible && (is_intersecting || update_area == NULL)) {
+    toolbar_render(board->toolbar);
+    // draw toolbar on texture
+    unsigned char *toolbar_data = cairo_image_surface_get_data(board->toolbar->cr_surface);
+    SDL_UpdateTexture(board->sdl_texture, &board->toolbar_area, toolbar_data, board->toolbar->pitch);
+  }
   SDL_RenderClear(board->renderer);
   SDL_RenderCopy(board->renderer, board->sdl_texture, NULL, NULL);
   SDL_RenderPresent(board->renderer);
@@ -291,4 +317,14 @@ void board_update_cursor(Board *board) {
   cairo_destroy(cr);
   cairo_surface_destroy(cr_surface);
   SDL_FreeSurface(cursor_surface);
+}
+
+void board_update_toolbar_area(Board *board) {
+  SDL_Rect toolbar_area = {
+      .x = (board->width - board->toolbar->width) / 2,
+      .y = board->height - board->toolbar->height,
+      .w = board->toolbar->width,
+      .h = board->toolbar->height,
+  };
+  board->toolbar_area = toolbar_area;
 }

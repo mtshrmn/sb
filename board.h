@@ -1,6 +1,7 @@
 #ifndef SB_BOARD_H
 #define SB_BOARD_H
 
+#include "toolbar.h"
 #include "vector.h"
 
 #include <SDL2/SDL.h>
@@ -9,14 +10,6 @@
 
 // r, g, b, a
 #define BOARD_BG 1, 1, 1, 1.0
-
-// color definitions (0xAARRGGBB)
-#define BLACK 0xFF000000
-#define RED 0xFFFF0000
-
-#define STROKE_WIDTH_THIN 1.5
-#define STROKE_WIDTH_MEDIUM 3.0
-#define STROKE_WIDTH_THICK 6.0
 
 typedef enum BoardState {
   STATE_IDLE,
@@ -30,6 +23,7 @@ typedef struct Board {
   SDL_Surface *sdl_surface;
   SDL_Texture *sdl_texture;
   SDL_Cursor *cursor;
+  SDL_Cursor *default_cursor;
 
   cairo_surface_t *cr_surface;
   cairo_t *cr;
@@ -43,6 +37,8 @@ typedef struct Board {
   double stroke_width;
   double stroke_color;
 
+  ToolBar *toolbar;
+  SDL_Rect toolbar_area;
   Vector *current_stroke_points; // contains Point
   Vector *current_stroke_paths;  // contains cairo_path_t
   Vector *strokes;               // contains Path
@@ -60,4 +56,5 @@ void board_translate(Board *board, double dx, double dy);
 void board_reset_translation(Board *board);
 void board_refresh(Board *board);
 void board_update_cursor(Board *board);
+void board_update_toolbar_area(Board *board);
 #endif // SB_BOARD_H
