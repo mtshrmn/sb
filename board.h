@@ -1,15 +1,13 @@
 #ifndef SB_BOARD_H
 #define SB_BOARD_H
 
+#include "config.h"
 #include "toolbar.h"
 #include "vector.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <cairo/cairo.h>
-
-// r, g, b, a
-#define BOARD_BG 1, 1, 1, 1.0
 
 typedef enum BoardState {
   STATE_IDLE,
@@ -37,7 +35,9 @@ typedef struct Board {
   double stroke_width;
   double stroke_color;
 
+#ifdef USE_TOOLBAR
   ToolBar *toolbar;
+#endif
   SDL_Rect toolbar_area;
   Vector *current_stroke_points; // contains Point
   Vector *current_stroke_paths;  // contains cairo_path_t
@@ -56,7 +56,9 @@ void board_translate(Board *board, double dx, double dy);
 void board_reset_translation(Board *board);
 void board_refresh(Board *board);
 void board_update_cursor(Board *board);
+#ifdef USE_TOOLBAR
 void board_update_toolbar_area(Board *board);
 void board_click_toolbar(Board *board, double x);
+#endif
 void board_reset_current_stroke(Board *board);
 #endif // SB_BOARD_H

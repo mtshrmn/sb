@@ -1,12 +1,12 @@
 #include "toolbar.h"
+#include "config.h"
 #include <SDL2/SDL.h>
 
 unsigned int get_color(Color color) {
-  // color definitions (0xAARRGGBB)
-  if (color == COLOR_RED)
-    return 0xFFFF0000;
-  if (color == COLOR_BLACK)
-    return 0xFF000000;
+  if (color == COLOR_PRIMARY)
+    return _COLOR_PRIMARY;
+  if (color == COLOR_SECONDARY)
+    return _COLOR_SECONDARY;
 
   // return transparent black as default
   return 0x00000000;
@@ -14,11 +14,11 @@ unsigned int get_color(Color color) {
 
 double get_width(StrokeWidth width) {
   if (width == STROKE_WIDTH_THIN)
-    return 1.5;
+    return _STROKE_WIDTH_THIN;
   if (width == STROKE_WIDTH_MEDIUM)
-    return 3.0;
+    return _STROKE_WIDTH_MEDIUM;
   if (width == STROKE_WIDTH_THICK)
-    return 6.0;
+    return _STROKE_WIDTH_THICK;
 
   // return invalid width as default
   return -1;
@@ -45,7 +45,7 @@ ToolBar *toolbar_create(int height, SDL_PixelFormat *pixel_format) {
   toolbar->pitch = width * 4;
   toolbar->visible = true;
   toolbar->pixel_format = pixel_format;
-  toolbar->selected_color = COLOR_BLACK;
+  toolbar->selected_color = COLOR_PRIMARY;
   toolbar->selected_width = STROKE_WIDTH_MEDIUM;
   return toolbar;
 
@@ -68,13 +68,13 @@ void toolbar_free(ToolBar *toolbar) {
 
 void toolbar_render(ToolBar *toolbar) {
   // clear toolbar
-  cairo_set_source_rgba(toolbar->cr, 1, 1, 1, 1);
+  cairo_set_source_rgba(toolbar->cr, BOARD_BG);
   cairo_paint(toolbar->cr);
   cairo_fill(toolbar->cr);
 
   // draw border
   cairo_set_line_width(toolbar->cr, 2);
-  cairo_set_source_rgba(toolbar->cr, 0, 0, 0, 1);
+  cairo_set_source_rgba(toolbar->cr, BOARD_BG_INVERTED);
   cairo_rectangle(toolbar->cr, 0, 0, toolbar->width, toolbar->height + 1);
   cairo_stroke(toolbar->cr);
 
@@ -83,7 +83,7 @@ void toolbar_render(ToolBar *toolbar) {
   cairo_set_line_join(toolbar->cr, CAIRO_LINE_JOIN_ROUND);
 
   // draw stroke width
-  cairo_set_source_rgba(toolbar->cr, 0, 0, 0, 1);
+  cairo_set_source_rgba(toolbar->cr, BOARD_BG_INVERTED);
 
   for (int width = 0; width < STROKES_AMOUNT; ++width) {
     int pos = width;
@@ -117,7 +117,7 @@ void toolbar_render(ToolBar *toolbar) {
 
   // underline selected color and stroke width
   cairo_set_line_width(toolbar->cr, 2);
-  cairo_set_source_rgba(toolbar->cr, 0, 0, 0, 1);
+  cairo_set_source_rgba(toolbar->cr, BOARD_BG_INVERTED);
   cairo_set_line_cap(toolbar->cr, CAIRO_LINE_CAP_SQUARE);
   double fifth = toolbar->height / 5.0;
 

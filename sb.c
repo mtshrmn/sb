@@ -83,10 +83,12 @@ int main() {
           double raw_x = mouse_x + board->dx;
           double raw_y = mouse_y + board->dy;
 
+#ifdef USE_TOOLBAR
           if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
             board_click_toolbar(board, raw_x);
             break;
           }
+#endif
 
           board->state = STATE_DRAWING;
           board_reset_current_stroke(board);
@@ -123,10 +125,12 @@ int main() {
             break;
           }
           board->state = STATE_IDLE;
+#ifdef USE_TOOLBAR
           if (board->toolbar->visible == false) {
             board->toolbar->visible = true;
             board_render(board, &board->toolbar_area);
           }
+#endif
           cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
           cairo_new_path(board->cr);
           Path *colored_stroke = path_create(stroke, board->stroke_color, board->stroke_width);
@@ -148,11 +152,15 @@ int main() {
           double raw_x = mouse_x + board->dx;
           double raw_y = mouse_y + board->dy;
           SDL_ShowCursor(true);
+#ifdef USE_TOOLBAR
           if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
             SDL_SetCursor(board->default_cursor);
           } else {
             SDL_SetCursor(board->cursor);
           }
+#else
+          SDL_SetCursor(board->cursor);
+#endif
 
           break;
         }
@@ -179,6 +187,7 @@ int main() {
         // determine visibility of the toolbar
         double raw_x = mouse_x + board->dx;
         double raw_y = mouse_y + board->dy;
+#ifdef USE_TOOLBAR
         bool previous = board->toolbar->visible;
         if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
           board->toolbar->visible = false;
@@ -189,6 +198,7 @@ int main() {
         if (previous != board->toolbar->visible) {
           board_render(board, &board->toolbar_area);
         }
+#endif
 
         Point *last_point = vector_top(board->current_stroke_points);
         if (last_point->x == mouse_x && last_point->y == mouse_y) {
@@ -264,23 +274,29 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_MINUS]) {
-          board->toolbar->selected_color = COLOR_BLACK;
-          board->stroke_color = get_color(COLOR_BLACK);
+#ifdef USE_TOOLBAR
+          board->toolbar->selected_color = COLOR_PRIMARY;
+#endif
+          board->stroke_color = get_color(COLOR_PRIMARY);
           board_update_cursor(board);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_EQUALS]) {
-          board->toolbar->selected_color = COLOR_RED;
-          board->stroke_color = get_color(COLOR_RED);
+#ifdef USE_TOOLBAR
+          board->toolbar->selected_color = COLOR_SECONDARY;
+#endif
+          board->stroke_color = get_color(COLOR_SECONDARY);
           board_update_cursor(board);
           board_refresh(board);
           break;
         }
 
         if (keys[SDL_SCANCODE_1]) {
+#ifdef USE_TOOl
           board->toolbar->selected_width = STROKE_WIDTH_THIN;
+#endif
           board->stroke_width = get_width(STROKE_WIDTH_THIN);
           board_update_cursor(board);
           board_refresh(board);
@@ -288,7 +304,9 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_2]) {
+#ifdef USE_TOOLBAR
           board->toolbar->selected_width = STROKE_WIDTH_MEDIUM;
+#endif
           board->stroke_width = get_width(STROKE_WIDTH_MEDIUM);
           board_update_cursor(board);
           board_refresh(board);
@@ -296,7 +314,9 @@ int main() {
         }
 
         if (keys[SDL_SCANCODE_3]) {
+#ifdef USE_TOOLBAR
           board->toolbar->selected_width = STROKE_WIDTH_THICK;
+#endif
           board->stroke_width = get_width(STROKE_WIDTH_THICK);
           board_update_cursor(board);
           board_refresh(board);

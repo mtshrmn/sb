@@ -6,8 +6,8 @@
 #include <stdbool.h>
 
 typedef enum Color {
-  COLOR_BLACK,
-  COLOR_RED,
+  COLOR_PRIMARY,
+  COLOR_SECONDARY,
   COLORS_AMOUNT,
 } Color;
 
