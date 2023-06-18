@@ -233,6 +233,10 @@ void board_render(Board *board, SDL_Rect *update_area) {
 }
 
 void board_setup_draw(Board *board) {
+  Uint8 r, g, b, a;
+  SDL_GetRGBA(board->stroke_color, board->sdl_surface->format, &r, &g, &b, &a);
+  cairo_set_source_rgba(board->cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+  cairo_set_line_width(board->cr, board->stroke_width);
   cairo_set_line_cap(board->cr, CAIRO_LINE_CAP_ROUND);
   cairo_set_line_join(board->cr, CAIRO_LINE_JOIN_ROUND);
 }
@@ -327,4 +331,24 @@ void board_update_toolbar_area(Board *board) {
       .h = board->toolbar->height,
   };
   board->toolbar_area = toolbar_area;
+}
+
+void board_click_toolbar(Board *board, double x) {
+  int color, width;
+  toolbar_select_button(board->toolbar, x - board->toolbar_area.x, &width, &color);
+  if (width >= 0) {
+    board->stroke_width = get_width(width);
+  }
+
+  if (color >= 0) {
+    board->stroke_color = get_color(color);
+  }
+
+  board_update_cursor(board);
+  board_refresh(board);
+}
+
+void board_reset_current_stroke(Board *board) {
+  vector_reset(board->current_stroke_points);
+  vector_reset(board->current_stroke_paths);
 }

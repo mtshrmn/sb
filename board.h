@@ -57,4 +57,6 @@ void board_reset_translation(Board *board);
 void board_refresh(Board *board);
 void board_update_cursor(Board *board);
 void board_update_toolbar_area(Board *board);
+void board_click_toolbar(Board *board, double x);
+void board_reset_current_stroke(Board *board);
 #endif // SB_BOARD_H

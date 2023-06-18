@@ -84,30 +84,15 @@ int main() {
           double raw_y = mouse_y + board->dy;
 
           if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
-            int color, width;
-            toolbar_select_button(board->toolbar, raw_x - board->toolbar_area.x, &width, &color);
-            if (width >= 0) {
-              board->stroke_width = get_width(width);
-            }
-
-            if (color >= 0) {
-              board->stroke_color = get_color(color);
-            }
-            board_update_cursor(board);
-            board_refresh(board);
+            board_click_toolbar(board, raw_x);
             break;
           }
 
           board->state = STATE_DRAWING;
-          vector_reset(board->current_stroke_points);
-          vector_reset(board->current_stroke_paths);
+          board_reset_current_stroke(board);
           Point *current_pos = point_create(mouse_x, mouse_y);
           vector_append(board->current_stroke_points, current_pos);
           board_setup_draw(board);
-          Uint8 r, g, b, a;
-          SDL_GetRGBA(board->stroke_color, board->sdl_surface->format, &r, &g, &b, &a);
-          cairo_set_source_rgba(board->cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
-          cairo_set_line_width(board->cr, board->stroke_width);
           cairo_move_to(board->cr, mouse_x, mouse_y);
           cairo_arc(board->cr, mouse_x, mouse_y, 0, 0, M_PI * 2);
           cairo_path_t *point_path = cairo_copy_path(board->cr);
