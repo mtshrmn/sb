@@ -17,7 +17,7 @@ EXECUTABLE := sb
 build: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
+	$(CC) $(CFLAGS) $^ $(LIBS) -o $(BUILDDIR)/$@
 
 # Object file compilation rule
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
