@@ -3,7 +3,7 @@
 
 ### Compilation
 ```sh
-$ gcc *.c -lSDL2 -lcairo -lm -o sb
+$ make build
 ```
 
 ### Requirements

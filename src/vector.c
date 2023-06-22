@@ -24,17 +24,17 @@ Vector *vector_create(VectorType type) {
 
 void vector_reset(Vector *vec) {
   if (vec->type == VECTOR_POINTS) {
-    for (int i = 0; i < vec->length; ++i) {
+    for (size_t i = 0; i < vec->length; ++i) {
       Point *point = vector_get(vec, i);
       point_free(point);
     }
   } else if (vec->type == VECTOR_COLORED_PATHS) {
-    for (int i = 0; i < vec->length; ++i) {
+    for (size_t i = 0; i < vec->length; ++i) {
       Path *path = vector_get(vec, i);
       path_free(path);
     }
   } else { // data is of type cairo_path_t
-    for (int i = 0; i < vec->length; ++i) {
+    for (size_t i = 0; i < vec->length; ++i) {
       cairo_path_t *path = vector_get(vec, i);
       cairo_path_destroy(path);
     }
@@ -77,7 +77,7 @@ void vector_pop(Vector *vec) {
 }
 
 void *vector_get(Vector *vec, size_t index) {
-  if (index < 0 || index >= vec->length) {
+  if (index >= vec->length) {
     return NULL;
   }
 

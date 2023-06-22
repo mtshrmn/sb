@@ -188,9 +188,6 @@ void board_resize_surface(Board *board) {
     board->cr_surface = cr_surface;
   }
 
-  int cairo_x_multiplier = renderer_width / board->width;
-  int cairo_y_multiplier = renderer_height / board->height;
-
   cairo_t *canvas = cairo_create(board->cr_surface);
 
   if (board->cr != canvas) {
@@ -212,7 +209,6 @@ void board_clear(Board *board) {
 
 void board_render(Board *board, SDL_Rect *update_area) {
   unsigned char *data = cairo_image_surface_get_data(board->cr_surface);
-  int pitch = board->sdl_surface->pitch;
   if (update_area != NULL) {
     // transform the data and "offset" it in such way
     // that when we update the surface, it appears as
@@ -231,9 +227,9 @@ void board_render(Board *board, SDL_Rect *update_area) {
   }
   SDL_UpdateTexture(board->sdl_texture, update_area, data, board->sdl_surface->pitch);
 
+#ifdef USE_TOOLBAR
   SDL_Rect result;
   bool is_intersecting = SDL_IntersectRect(update_area, &board->toolbar_area, &result) == SDL_TRUE;
-#ifdef USE_TOOLBAR
   if (board->toolbar->visible && (is_intersecting || update_area == NULL)) {
     toolbar_render(board->toolbar);
     // draw toolbar on texture
@@ -261,7 +257,7 @@ void board_setup_draw(Board *board) {
 
 void board_draw_strokes(Board *board) {
   board_setup_draw(board);
-  for (int i = 0; i < board->strokes->length; ++i) {
+  for (size_t i = 0; i < board->strokes->length; ++i) {
     cairo_new_path(board->cr);
     Path *path = vector_get(board->strokes, i);
     Uint8 r, g, b, a;

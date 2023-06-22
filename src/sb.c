@@ -13,7 +13,7 @@
 cairo_path_t *merge_paths(cairo_t *cr, Vector *paths) {
   // assume paths->type == VECTOR_PATHS
   cairo_new_path(cr);
-  for (int i = 0; i < paths->length; ++i) {
+  for (size_t i = 0; i < paths->length; ++i) {
     cairo_path_t *sub_path = vector_get(paths, i);
     cairo_append_path(cr, sub_path);
   }
@@ -86,10 +86,10 @@ int main() {
 
         if (event.button.button == SDL_BUTTON_LEFT) {
           get_mousestate(board, &mouse_x, &mouse_y);
-          double raw_x = mouse_x + board->dx;
-          double raw_y = mouse_y + board->dy;
 
 #ifdef USE_TOOLBAR
+          double raw_x = mouse_x + board->dx;
+          double raw_y = mouse_y + board->dy;
           if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
             board_click_toolbar(board, raw_x);
             break;
@@ -155,10 +155,10 @@ int main() {
       case SDL_MOUSEMOTION: {
         if (board->state == STATE_IDLE) {
           get_mousestate(board, &mouse_x, &mouse_y);
-          double raw_x = mouse_x + board->dx;
-          double raw_y = mouse_y + board->dy;
           SDL_ShowCursor(true);
 #ifdef USE_TOOLBAR
+          double raw_x = mouse_x + board->dx;
+          double raw_y = mouse_y + board->dy;
           if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
             SDL_SetCursor(board->default_cursor);
           } else {
@@ -191,9 +191,9 @@ int main() {
         get_mousestate(board, &mouse_x, &mouse_y);
 
         // determine visibility of the toolbar
+#ifdef USE_TOOLBAR
         double raw_x = mouse_x + board->dx;
         double raw_y = mouse_y + board->dy;
-#ifdef USE_TOOLBAR
         bool previous = board->toolbar->visible;
         if (is_inside_rect(&board->toolbar_area, raw_x, raw_y)) {
           board->toolbar->visible = false;
