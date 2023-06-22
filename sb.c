@@ -71,6 +71,12 @@ int main() {
         if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
           board_resize_surface(board);
           board_refresh(board);
+          break;
+        }
+
+        if (event.window.event == SDL_WINDOWEVENT_EXPOSED) {
+          board_refresh(board);
+          break;
         }
       } break;
       case SDL_MOUSEBUTTONDOWN: {
