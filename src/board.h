@@ -37,8 +37,8 @@ typedef struct Board {
 
 #ifdef USE_TOOLBAR
   ToolBar *toolbar;
-#endif
   SDL_Rect toolbar_area;
+#endif
   Vector *current_stroke_points; // contains Point
   Vector *current_stroke_paths;  // contains cairo_path_t
   Vector *strokes;               // contains Path
