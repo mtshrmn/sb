@@ -28,5 +28,5 @@ $(shell mkdir -p $(BUILDDIR))
 
 # Clean target
 clean:
-	rm -rf $(BUILDDIR)/*.o $(EXECUTABLE)
+	rm -rf $(BUILDDIR)/*.o $(BUILDDIR)/$(EXECUTABLE)
 	rmdir $(BUILDDIR)
