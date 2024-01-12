@@ -99,6 +99,10 @@ Board *board_create(int width, int height) {
   board->stroke_width = get_width(STROKE_WIDTH_MEDIUM);
   board->stroke_color = get_color(COLOR_PRIMARY);
 #endif
+  board->mouse_x = 0;
+  board->mouse_x_raw = 0;
+  board->mouse_y = 0;
+  board->mouse_y_raw = 0;
   board->state = STATE_IDLE;
   return board;
 
@@ -289,6 +293,12 @@ void board_refresh(Board *board) {
   board_render(board, NULL);
 }
 
+void board_update_mouse_state(Board *board) {
+  SDL_GetMouseState(&board->mouse_x_raw, &board->mouse_y_raw);
+  board->mouse_x = board->mouse_x_raw - board->dx;
+  board->mouse_y = board->mouse_y_raw - board->dy;
+}
+
 void board_update_cursor(Board *board) {
   double width = board->stroke_width;
   SDL_Surface *cursor_surface = SDL_CreateRGBSurfaceWithFormat(0, width * 2, width * 2, 32, SDL_PIXELFORMAT_RGBA32);
@@ -367,4 +377,22 @@ void board_click_toolbar(Board *board, double x) {
 void board_reset_current_stroke(Board *board) {
   vector_reset(board->current_stroke_points);
   vector_reset(board->current_stroke_paths);
+}
+
+void board_set_stroke_width(Board *board, StrokeWidth width) {
+#ifdef USE_TOOLBAR
+  board->toolbar->selected_width = width;
+#endif
+  board->stroke_width = get_width(width);
+  board_update_cursor(board);
+  board_refresh(board);
+}
+
+void board_set_stroke_color(Board *board, Color color) {
+#ifdef USE_TOOLBAR
+  board->toolbar->selected_color = color;
+#endif
+  board->stroke_color = get_color(color);
+  board_update_cursor(board);
+  board_refresh(board);
 }

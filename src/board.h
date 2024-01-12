@@ -43,6 +43,10 @@ typedef struct Board {
   Vector *current_stroke_paths;  // contains cairo_path_t
   Vector *strokes;               // contains Path
   BoardState state;
+  double mouse_x;
+  int mouse_x_raw;
+  double mouse_y;
+  int mouse_y_raw;
 } Board;
 
 Board *board_create(int width, int height);
@@ -56,9 +60,12 @@ void board_translate(Board *board, double dx, double dy);
 void board_reset_translation(Board *board);
 void board_refresh(Board *board);
 void board_update_cursor(Board *board);
+void board_update_mouse_state(Board *board);
 #ifdef USE_TOOLBAR
 void board_update_toolbar_area(Board *board);
 void board_click_toolbar(Board *board, double x);
 #endif
 void board_reset_current_stroke(Board *board);
+void board_set_stroke_width(Board *board, StrokeWidth width);
+void board_set_stroke_color(Board *board, Color color);
 #endif // SB_BOARD_H
