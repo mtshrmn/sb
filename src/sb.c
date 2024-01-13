@@ -213,11 +213,6 @@ void on_mouse_motion(Board *board) {
     return;
   }
 
-  if (board->state == STATE_ERASING) {
-    // not implemented yet
-    return;
-  }
-
   // it is now guaranteed that board->state == STATE_DRAWING
   board_update_mouse_state(board);
 
