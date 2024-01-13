@@ -48,7 +48,7 @@ Board *board_create(int width, int height) {
 
   cairo_t *canvas = cairo_create(cr_surface);
 
-  SDL_SetRenderDrawColor(renderer, BOARD_BG);
+  SDL_SetRenderDrawColor(renderer, BOARD_BG_CAIRO);
   SDL_RenderClear(renderer);
 
   if (canvas == NULL)
@@ -68,12 +68,6 @@ Board *board_create(int width, int height) {
   if (strokes == NULL)
     goto defer;
 
-#ifdef USE_TOOLBAR
-  ToolBar *toolbar = toolbar_create(50, sdl_surface->format);
-  if (toolbar == NULL)
-    goto defer;
-#endif
-
   board->window = window;
   board->renderer = renderer;
   board->sdl_surface = sdl_surface;
@@ -84,21 +78,14 @@ Board *board_create(int width, int height) {
   board->cr = canvas;
   board->width = window_width;
   board->height = window_height;
-#ifdef USE_TOOLBAR
-  board->toolbar = toolbar;
-#endif
   board->current_stroke_points = current_stroke_points;
   board->current_stroke_paths = current_stroke_paths;
   board->strokes = strokes;
   board->dx = 0;
   board->dy = 0;
-#ifdef USE_TOOLBAR
-  board->stroke_width = get_width(toolbar->selected_width);
-  board->stroke_color = get_color(toolbar->selected_color);
-#else
-  board->stroke_width = get_width(STROKE_WIDTH_MEDIUM);
-  board->stroke_color = get_color(COLOR_PRIMARY);
-#endif
+  board->stroke_width = STROKE_WIDTH_MEDIUM;
+  board->stroke_color = COLOR_PRIMARY;
+  board->stroke_width_previous = board->stroke_width;
   board->mouse_x = 0;
   board->mouse_x_raw = 0;
   board->mouse_y = 0;
@@ -127,10 +114,6 @@ defer:
     vector_free(current_stroke_paths);
   if (strokes != NULL)
     vector_free(strokes);
-#ifdef USE_TOOLBAR
-  if (toolbar != NULL)
-    toolbar_free(toolbar);
-#endif
   if (default_cursor != NULL)
     SDL_FreeCursor(default_cursor);
   return NULL;
@@ -150,17 +133,11 @@ void board_free(Board *board) {
   SDL_DestroyRenderer(board->renderer);
   SDL_DestroyWindow(board->window);
 
-#ifdef USE_TOOLBAR
-  toolbar_free(board->toolbar);
-#endif
   free(board);
 }
 
 void board_resize_surface(Board *board) {
   SDL_GetWindowSize(board->window, &board->width, &board->height);
-#ifdef USE_TOOLBAR
-  board_update_toolbar_area(board);
-#endif
 
   int renderer_width;
   int renderer_height;
@@ -206,7 +183,7 @@ void board_resize_surface(Board *board) {
 }
 
 void board_clear(Board *board) {
-  cairo_set_source_rgba(board->cr, BOARD_BG);
+  cairo_set_source_rgba(board->cr, BOARD_BG_CAIRO);
   cairo_paint(board->cr);
   cairo_fill(board->cr);
 }
@@ -231,16 +208,6 @@ void board_render(Board *board, SDL_Rect *update_area) {
   }
   SDL_UpdateTexture(board->sdl_texture, update_area, data, board->sdl_surface->pitch);
 
-#ifdef USE_TOOLBAR
-  SDL_Rect result;
-  bool is_intersecting = SDL_IntersectRect(update_area, &board->toolbar_area, &result) == SDL_TRUE;
-  if (board->toolbar->visible && (is_intersecting || update_area == NULL)) {
-    toolbar_render(board->toolbar);
-    // draw toolbar on texture
-    unsigned char *toolbar_data = cairo_image_surface_get_data(board->toolbar->cr_surface);
-    SDL_UpdateTexture(board->sdl_texture, &board->toolbar_area, toolbar_data, board->toolbar->pitch);
-  }
-#endif
   SDL_RenderClear(board->renderer);
   SDL_RenderCopy(board->renderer, board->sdl_texture, NULL, NULL);
   SDL_RenderPresent(board->renderer);
@@ -329,6 +296,18 @@ void board_update_cursor(Board *board) {
   cairo_arc(cr, w / 2, h / 2, 0, 0, M_PI * 2);
   cairo_stroke(cr);
 
+  // if stroke_color is the same as the background color
+  // add an outline to the cursor
+  if (board->stroke_color == BOARD_BG) {
+    Uint8 r, g, b, a;
+    SDL_GetRGBA(BOARD_BG_INVERTED, cursor_surface->format, &r, &g, &b, &a);
+    cairo_set_source_rgba(cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+
+    cairo_set_line_width(cr, 2);
+    cairo_arc(cr, w / 2, h / 2, width / 2, 0, M_PI * 2);
+    cairo_stroke(cr);
+  }
+
   // render to sdl surface
   unsigned char *data = cairo_image_surface_get_data(cr_surface);
   Uint32 *cursor_surface_pixels = cursor_surface->pixels;
@@ -347,52 +326,19 @@ void board_update_cursor(Board *board) {
   SDL_FreeSurface(cursor_surface);
 }
 
-#ifdef USE_TOOLBAR
-void board_update_toolbar_area(Board *board) {
-  SDL_Rect toolbar_area = {
-      .x = (board->width - board->toolbar->width) / 2,
-      .y = board->height - board->toolbar->height,
-      .w = board->toolbar->width,
-      .h = board->toolbar->height,
-  };
-  board->toolbar_area = toolbar_area;
-}
-
-void board_click_toolbar(Board *board, double x) {
-  int color, width;
-  toolbar_select_button(board->toolbar, x - board->toolbar_area.x, &width, &color);
-  if (width >= 0) {
-    board->stroke_width = get_width(width);
-  }
-
-  if (color >= 0) {
-    board->stroke_color = get_color(color);
-  }
-
-  board_update_cursor(board);
-  board_refresh(board);
-}
-#endif
-
 void board_reset_current_stroke(Board *board) {
   vector_reset(board->current_stroke_points);
   vector_reset(board->current_stroke_paths);
 }
 
-void board_set_stroke_width(Board *board, StrokeWidth width) {
-#ifdef USE_TOOLBAR
-  board->toolbar->selected_width = width;
-#endif
-  board->stroke_width = get_width(width);
+void board_set_stroke_width(Board *board, double width) {
+  board->stroke_width = width;
   board_update_cursor(board);
   board_refresh(board);
 }
 
-void board_set_stroke_color(Board *board, Color color) {
-#ifdef USE_TOOLBAR
-  board->toolbar->selected_color = color;
-#endif
-  board->stroke_color = get_color(color);
+void board_set_stroke_color(Board *board, unsigned int color) {
+  board->stroke_color = color;
   board_update_cursor(board);
   board_refresh(board);
 }

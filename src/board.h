@@ -2,7 +2,6 @@
 #define SB_BOARD_H
 
 #include "config.h"
-#include "toolbar.h"
 #include "vector.h"
 
 #include <SDL2/SDL.h>
@@ -33,12 +32,10 @@ typedef struct Board {
   double dy;
 
   double stroke_width;
+  double stroke_width_previous;
   double stroke_color;
+  double stroke_color_previous;
 
-#ifdef USE_TOOLBAR
-  ToolBar *toolbar;
-  SDL_Rect toolbar_area;
-#endif
   Vector *current_stroke_points; // contains Point
   Vector *current_stroke_paths;  // contains cairo_path_t
   Vector *strokes;               // contains Path
@@ -61,11 +58,7 @@ void board_reset_translation(Board *board);
 void board_refresh(Board *board);
 void board_update_cursor(Board *board);
 void board_update_mouse_state(Board *board);
-#ifdef USE_TOOLBAR
-void board_update_toolbar_area(Board *board);
-void board_click_toolbar(Board *board, double x);
-#endif
 void board_reset_current_stroke(Board *board);
-void board_set_stroke_width(Board *board, StrokeWidth width);
-void board_set_stroke_color(Board *board, Color color);
+void board_set_stroke_width(Board *board, double width);
+void board_set_stroke_color(Board *board, unsigned int color);
 #endif // SB_BOARD_H
