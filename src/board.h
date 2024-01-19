@@ -61,4 +61,5 @@ void board_update_mouse_state(Board *board);
 void board_reset_current_stroke(Board *board);
 void board_set_stroke_width(Board *board, double width);
 void board_set_stroke_color(Board *board, unsigned int color);
+int board_save_image(Board *board, char *path);
 #endif // SB_BOARD_H

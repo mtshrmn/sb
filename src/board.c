@@ -1,6 +1,7 @@
 #include "board.h"
 #include "config.h"
 #include "path.h"
+#include "point.h"
 
 Board *board_create(int width, int height) {
   Board *board = malloc(sizeof(Board));
@@ -341,4 +342,47 @@ void board_set_stroke_color(Board *board, unsigned int color) {
   board->stroke_color = color;
   board_update_cursor(board);
   board_refresh(board);
+}
+
+int board_save_image(Board *board, char *path) {
+  // calulate bounding area of image
+  Point top_left, bottom_right;
+  cairo_path_t *prev_path = cairo_copy_path(board->cr);
+
+  for (size_t i = 0; i < board->strokes->length; ++i) {
+    cairo_path_t *path = ((Path *)vector_get(board->strokes, i))->path;
+    cairo_append_path(board->cr, path);
+  }
+
+  cairo_path_extents(board->cr, &top_left.x, &top_left.y, &bottom_right.x, &bottom_right.y);
+
+  // restore old path
+  cairo_new_path(board->cr);
+  cairo_append_path(board->cr, prev_path);
+  cairo_path_destroy(prev_path);
+
+  int width = bottom_right.x - top_left.x + 10;
+  int height = bottom_right.y - top_left.y + 10;
+  cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, width, height);
+  cairo_t *cr = cairo_create(surface);
+
+  // draw strokes on newly created cairo surface
+  cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+  cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_translate(cr, -top_left.x + 5, -top_left.y + 5);
+
+  for (size_t i = 0; i < board->strokes->length; ++i) {
+    Path *path = vector_get(board->strokes, i);
+    Uint8 r, g, b, a;
+    SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
+    cairo_set_source_rgba(cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+    cairo_set_line_width(cr, path->width);
+    cairo_append_path(cr, path->path);
+    cairo_stroke(cr);
+  }
+
+  cairo_surface_write_to_png(surface, path);
+  cairo_destroy(cr);
+  cairo_surface_destroy(surface);
+  return 0;
 }

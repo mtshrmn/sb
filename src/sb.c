@@ -4,6 +4,7 @@
 #include "vector.h"
 #include <SDL2/SDL_events.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define BOUNDS_PADDING 3
@@ -268,6 +269,19 @@ void on_key_down(Board *board) {
     board->stroke_width_previous = board->stroke_width;
     board_set_stroke_color(board, BOARD_BG);
     board_set_stroke_width(board, STROKE_WIDTH_THICKEST);
+  }
+
+  if (keys[SDL_SCANCODE_LCTRL] && keys[SDL_SCANCODE_S]) {
+    time_t timer;
+    time(&timer);
+    struct tm *time_info = localtime(&timer);
+
+    char filename[30];
+    if (strftime(filename, sizeof(filename), "sb_%Y_%m_%d-%H:%M:%S.png", time_info) == 0) {
+      return;
+    }
+
+    board_save_image(board, filename);
   }
 }
 
