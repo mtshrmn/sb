@@ -15,4 +15,5 @@ Path *path_create(cairo_path_t *path, unsigned int color, double width) {
 
 void path_free(Path *path) {
   cairo_path_destroy(path->path);
+  free(path);
 }
