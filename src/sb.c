@@ -1,7 +1,6 @@
 #include "board.h"
 #include "path.h"
 #include "point.h"
-#include "vector.h"
 #include <SDL2/SDL_events.h>
 #include <stdbool.h>
 #include <time.h>
@@ -11,11 +10,12 @@
 #define FPS 60
 #define FPS_DURATION (1000 / FPS)
 
-cairo_path_t *merge_paths(cairo_t *cr, Vector *paths) {
+cairo_path_t *merge_paths(cairo_t *cr, List *paths) {
   // assume paths->type == VECTOR_PATHS
   cairo_new_path(cr);
-  for (size_t i = 0; i < paths->length; ++i) {
-    cairo_path_t *sub_path = vector_get(paths, i);
+  ListNode *node;
+  list_foreach(paths, node) {
+    cairo_path_t *sub_path = node->data;
     cairo_append_path(cr, sub_path);
   }
 
@@ -63,12 +63,12 @@ void on_mouse_left_button_down(Board *board) {
   board->state = STATE_DRAWING;
   board_reset_current_stroke(board);
   Point *current_pos = point_create(board->mouse_x, board->mouse_y);
-  vector_append(board->current_stroke_points, current_pos);
+  list_append(board->current_stroke_points, current_pos);
   board_setup_draw(board);
   cairo_move_to(board->cr, board->mouse_x, board->mouse_y);
   cairo_arc(board->cr, board->mouse_x, board->mouse_y, 0, 0, M_PI * 2);
   cairo_path_t *point_path = cairo_copy_path(board->cr);
-  vector_append(board->current_stroke_paths, point_path);
+  list_append(board->current_stroke_paths, point_path);
   cairo_stroke(board->cr);
   SDL_Rect bounds = {
       .x = board->mouse_x_raw - board->stroke_width,
@@ -108,7 +108,7 @@ void on_mouse_left_button_up(Board *board) {
   cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
   cairo_new_path(board->cr);
   Path *colored_stroke = path_create(stroke, board->stroke_color, board->stroke_width);
-  vector_append(board->strokes, colored_stroke);
+  list_append(board->strokes, colored_stroke);
   board->state = STATE_IDLE;
 }
 
@@ -130,16 +130,16 @@ void on_mouse_button_up(Board *board, SDL_Event *event) {
   }
 }
 
-void draw_smooth_stroke(Board *board, Vector *stroke) {
+void draw_smooth_stroke(Board *board, List *stroke) {
   switch (stroke->length) {
   case 2: {
-    Point *prev = vector_get(stroke, 0);
+    Point *prev = stroke->head->data;
     cairo_move_to(board->cr, prev->x, prev->y);
   } break;
   case 3: {
-    Point *origin = vector_get(stroke, 0);
-    Point *dest = vector_get(stroke, 1);
-    Point *next = vector_get(stroke, 2);
+    Point *origin = stroke->head->data;
+    Point *dest = stroke->head->next->data;
+    Point *next = stroke->head->next->next->data;
 
     Point *h1 = point_create(0, 0);
     Point *h2 = point_create(0, 0);
@@ -152,11 +152,10 @@ void draw_smooth_stroke(Board *board, Vector *stroke) {
     point_free(h2);
   } break;
   default: {
-    size_t last_index = stroke->length - 1;
-    Point *prev = vector_get(stroke, last_index - 3);
-    Point *origin = vector_get(stroke, last_index - 2);
-    Point *dest = vector_get(stroke, last_index - 1);
-    Point *next = vector_get(stroke, last_index);
+    Point *prev = stroke->tail->prev->prev->prev->data;
+    Point *origin = stroke->tail->prev->prev->data;
+    Point *dest = stroke->tail->prev->data;
+    Point *next = stroke->tail->data;
 
     Point *h1 = point_create(0, 0);
     Point *h2 = point_create(0, 0);
@@ -171,7 +170,7 @@ void draw_smooth_stroke(Board *board, Vector *stroke) {
   }
 
   cairo_path_t *sub_path = cairo_copy_path(board->cr);
-  vector_append(board->current_stroke_paths, sub_path);
+  list_append(board->current_stroke_paths, sub_path);
   SDL_Rect bounds = get_path_bounding_area(board);
   cairo_stroke(board->cr);
   board_render(board, &bounds);
@@ -196,17 +195,17 @@ void on_mouse_motion(Board *board) {
   board_update_mouse_state(board);
 
   // don't draw the same point twice.
-  Point *last_point = vector_top(board->current_stroke_points);
+  Point *last_point = list_top(board->current_stroke_points);
   if (last_point->x == board->mouse_x && last_point->y == board->mouse_y) {
     return;
   }
 
   Point *current_pos = point_create(board->mouse_x, board->mouse_y);
-  vector_append(board->current_stroke_points, current_pos);
+  list_append(board->current_stroke_points, current_pos);
 
   // now that we know that board->current_stroke_points
   // won't mutate, alias it for readability.
-  Vector *current_stroke = board->current_stroke_points;
+  List *current_stroke = board->current_stroke_points;
   draw_smooth_stroke(board, current_stroke);
 }
 
@@ -216,7 +215,7 @@ void on_key_down(Board *board) {
   // ctrl+z -> undo last stroke
   if (keys[SDL_SCANCODE_LCTRL] && keys[SDL_SCANCODE_Z]) {
     if (board->strokes->length != 0) {
-      vector_pop(board->strokes);
+      list_pop(board->strokes);
       board_refresh(board);
     }
     return;

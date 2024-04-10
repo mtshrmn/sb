@@ -59,13 +59,13 @@ Board *board_create(int width, int height) {
   if (default_cursor == NULL)
     goto defer;
 
-  Vector *current_stroke_points = vector_create(VECTOR_POINTS);
+  List *current_stroke_points = list_create(LIST_POINTS);
   if (current_stroke_points == NULL)
     goto defer;
-  Vector *current_stroke_paths = vector_create(VECTOR_PATHS);
+  List *current_stroke_paths = list_create(LIST_PATHS);
   if (current_stroke_paths == NULL)
     goto defer;
-  Vector *strokes = vector_create(VECTOR_COLORED_PATHS);
+  List *strokes = list_create(LIST_COLORED_PATHS);
   if (strokes == NULL)
     goto defer;
 
@@ -110,20 +110,20 @@ defer:
   if (window != NULL)
     SDL_DestroyWindow(window);
   if (current_stroke_points != NULL)
-    vector_free(current_stroke_points);
+    list_free(current_stroke_points);
   if (current_stroke_paths != NULL)
-    vector_free(current_stroke_paths);
+    list_free(current_stroke_paths);
   if (strokes != NULL)
-    vector_free(strokes);
+    list_free(strokes);
   if (default_cursor != NULL)
     SDL_FreeCursor(default_cursor);
   return NULL;
 }
 
 void board_free(Board *board) {
-  vector_free(board->strokes);
-  vector_free(board->current_stroke_paths);
-  vector_free(board->current_stroke_points);
+  list_free(board->strokes);
+  list_free(board->current_stroke_paths);
+  list_free(board->current_stroke_points);
 
   cairo_destroy(board->cr);
   cairo_surface_destroy(board->cr_surface);
@@ -229,9 +229,10 @@ void board_setup_draw(Board *board) {
 
 void board_draw_strokes(Board *board) {
   board_setup_draw(board);
-  for (size_t i = 0; i < board->strokes->length; ++i) {
+  ListNode *node;
+  list_foreach(board->strokes, node) {
     cairo_new_path(board->cr);
-    Path *path = vector_get(board->strokes, i);
+    Path *path = node->data;
     Uint8 r, g, b, a;
     SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
     cairo_set_source_rgba(board->cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);
@@ -328,8 +329,8 @@ void board_update_cursor(Board *board) {
 }
 
 void board_reset_current_stroke(Board *board) {
-  vector_reset(board->current_stroke_points);
-  vector_reset(board->current_stroke_paths);
+  list_reset(board->current_stroke_points);
+  list_reset(board->current_stroke_paths);
 }
 
 void board_set_stroke_width(Board *board, double width) {
@@ -349,8 +350,9 @@ int board_save_image(Board *board, char *path) {
   Point top_left, bottom_right;
   cairo_path_t *prev_path = cairo_copy_path(board->cr);
 
-  for (size_t i = 0; i < board->strokes->length; ++i) {
-    cairo_path_t *path = ((Path *)vector_get(board->strokes, i))->path;
+  ListNode *node;
+  list_foreach(board->strokes, node) {
+    cairo_path_t *path = ((Path *)node->data)->path;
     cairo_append_path(board->cr, path);
   }
 
@@ -371,8 +373,8 @@ int board_save_image(Board *board, char *path) {
   cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
   cairo_translate(cr, -top_left.x + 5, -top_left.y + 5);
 
-  for (size_t i = 0; i < board->strokes->length; ++i) {
-    Path *path = vector_get(board->strokes, i);
+  list_foreach(board->strokes, node) {
+    Path *path = node->data;
     Uint8 r, g, b, a;
     SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
     cairo_set_source_rgba(cr, r / 255.0, g / 255.0, b / 255.0, a / 255.0);

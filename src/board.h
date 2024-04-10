@@ -2,7 +2,7 @@
 #define SB_BOARD_H
 
 #include "config.h"
-#include "vector.h"
+#include "list.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
@@ -36,9 +36,9 @@ typedef struct Board {
   double stroke_color;
   double stroke_color_previous;
 
-  Vector *current_stroke_points; // contains Point
-  Vector *current_stroke_paths;  // contains cairo_path_t
-  Vector *strokes;               // contains Path
+  List *current_stroke_points; // contains Point
+  List *current_stroke_paths;  // contains cairo_path_t
+  List *strokes;               // contains Path
   BoardState state;
   double mouse_x;
   int mouse_x_raw;
