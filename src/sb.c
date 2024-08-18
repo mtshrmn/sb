@@ -13,8 +13,8 @@
 cairo_path_t *merge_paths(cairo_t *cr, List *paths) {
   // assume paths->type == VECTOR_PATHS
   cairo_new_path(cr);
-  ListNode *node;
-  list_foreach(paths, node) {
+  ListNode *node, *next_node;
+  list_foreach(paths, node, next_node) {
     cairo_path_t *sub_path = node->data;
     cairo_append_path(cr, sub_path);
   }

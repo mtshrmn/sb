@@ -1,24 +1,18 @@
 #include "list.h"
-#include "path.h"
-#include "point.h"
 
 static void listnode_free(ListNode *node) {
-  void *data = node->data;
-  switch (node->type) {
-  case LIST_POINTS:
-    point_free((Point *)data);
-    break;
-  case LIST_COLORED_PATHS:
-    path_free((Path *)data);
-    break;
-  case LIST_PATHS:
-    cairo_path_destroy((cairo_path_t *)data);
-    break;
+  if (node == NULL) {
+    return;
   }
+
+  if (node->free_data != NULL && node->data != NULL) {
+    node->free_data(node->data);
+  }
+
   free(node);
 }
 
-List *list_create(ListType type) {
+List *list_create(list_free_function free_data_function) {
   List *list = malloc(sizeof(*list));
   if (list == NULL) {
     return NULL;
@@ -27,7 +21,7 @@ List *list_create(ListType type) {
   list->head = NULL;
   list->tail = NULL;
   list->length = 0;
-  list->type = type;
+  list->free_data = free_data_function;
 
   return list;
 }
@@ -56,7 +50,7 @@ int list_append(List *l, void *item) {
   }
 
   node->data = item;
-  node->type = l->type;
+  node->free_data = l->free_data;
   node->next = NULL;
   node->prev = l->tail;
 
@@ -100,4 +94,56 @@ void *list_top(List *l) {
     return NULL;
   }
   return l->tail->data;
+}
+
+void list_remove(List *l, ListNode *node) {
+  if (l == NULL || node == NULL || l->length == 0) {
+    return;
+  }
+
+  // Update head or tail if necessary
+  if (l->head == node) {
+    l->head = node->next;
+  }
+  if (l->tail == node) {
+    l->tail = node->prev;
+  }
+
+  // Update the neighboring nodes
+  if (node->prev != NULL) {
+    node->prev->next = node->next;
+  }
+  if (node->next != NULL) {
+    node->next->prev = node->prev;
+  }
+
+  listnode_free(node);
+  l->length--;
+
+  // If the list is now empty, reset head and tail
+  if (l->length == 0) {
+    l->head = NULL;
+    l->tail = NULL;
+  }
+}
+
+int list_contains(List *l, void *item) {
+  ListNode *node, *next_node;
+  list_foreach(l, node, next_node) {
+    if (node->data == item) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+size_t list_getlen(List *l) {
+  size_t len = 0;
+  ListNode *stroke, *stroke_next;
+  list_foreach(l, stroke, stroke_next) {
+    len++;
+  }
+
+  return len;
 }

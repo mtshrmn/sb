@@ -3,21 +3,23 @@
 #include "path.h"
 #include "point.h"
 
+#define DEFER_IF_NULL(x)                                                                                               \
+  do {                                                                                                                 \
+    if ((x) == NULL) {                                                                                                 \
+      goto defer;                                                                                                      \
+    }                                                                                                                  \
+  } while (0)
+
 Board *board_create(int width, int height) {
   Board *board = malloc(sizeof(Board));
-  if (board == NULL)
-    goto defer;
+  DEFER_IF_NULL(board);
 
   SDL_Window *window = SDL_CreateWindow("Simple Board", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height,
                                         SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
-
-  if (window == NULL)
-    goto defer;
+  DEFER_IF_NULL(window);
 
   SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-
-  if (renderer == NULL)
-    goto defer;
+  DEFER_IF_NULL(renderer);
 
   int window_width;
   int window_height;
@@ -29,19 +31,13 @@ Board *board_create(int width, int height) {
 
   SDL_Surface *sdl_surface =
       SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0);
-
-  if (sdl_surface == NULL)
-    goto defer;
+  DEFER_IF_NULL(sdl_surface);
 
   SDL_Texture *sdl_texture = SDL_CreateTextureFromSurface(renderer, sdl_surface);
-
-  if (sdl_texture == NULL)
-    goto defer;
+  DEFER_IF_NULL(sdl_texture);
 
   cairo_surface_t *cr_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h);
-
-  if (cr_surface == NULL)
-    goto defer;
+  DEFER_IF_NULL(cr_surface);
 
   int x_multiplier = renderer_width / window_width;
   int y_multiplier = renderer_height / window_height;
@@ -51,23 +47,17 @@ Board *board_create(int width, int height) {
 
   SDL_SetRenderDrawColor(renderer, BOARD_BG_CAIRO);
   SDL_RenderClear(renderer);
-
-  if (canvas == NULL)
-    goto defer;
+  DEFER_IF_NULL(canvas);
 
   SDL_Cursor *default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-  if (default_cursor == NULL)
-    goto defer;
+  DEFER_IF_NULL(default_cursor);
 
-  List *current_stroke_points = list_create(LIST_POINTS);
-  if (current_stroke_points == NULL)
-    goto defer;
-  List *current_stroke_paths = list_create(LIST_PATHS);
-  if (current_stroke_paths == NULL)
-    goto defer;
-  List *strokes = list_create(LIST_COLORED_PATHS);
-  if (strokes == NULL)
-    goto defer;
+  List *current_stroke_points = list_create((void *)&point_free);
+  DEFER_IF_NULL(current_stroke_points);
+  List *current_stroke_paths = list_create((void *)&cairo_path_destroy);
+  DEFER_IF_NULL(current_stroke_paths);
+  List *strokes = list_create((void *)&path_free);
+  DEFER_IF_NULL(strokes);
 
   board->window = window;
   board->renderer = renderer;
@@ -95,8 +85,7 @@ Board *board_create(int width, int height) {
   return board;
 
 defer:
-  if (board != NULL)
-    free(board);
+  free(board);
   if (canvas != NULL)
     cairo_destroy(canvas);
   if (cr_surface != NULL)
@@ -229,8 +218,8 @@ void board_setup_draw(Board *board) {
 
 void board_draw_strokes(Board *board) {
   board_setup_draw(board);
-  ListNode *node;
-  list_foreach(board->strokes, node) {
+  ListNode *node, *next_node;
+  list_foreach(board->strokes, node, next_node) {
     cairo_new_path(board->cr);
     Path *path = node->data;
     Uint8 r, g, b, a;
@@ -346,12 +335,12 @@ void board_set_stroke_color(Board *board, unsigned int color) {
 }
 
 int board_save_image(Board *board, char *path) {
-  // calulate bounding area of image
+  // calculate bounding area of image
   Point top_left, bottom_right;
   cairo_path_t *prev_path = cairo_copy_path(board->cr);
 
-  ListNode *node;
-  list_foreach(board->strokes, node) {
+  ListNode *node, *next_node;
+  list_foreach(board->strokes, node, next_node) {
     cairo_path_t *path = ((Path *)node->data)->path;
     cairo_append_path(board->cr, path);
   }
@@ -373,7 +362,7 @@ int board_save_image(Board *board, char *path) {
   cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
   cairo_translate(cr, -top_left.x + 5, -top_left.y + 5);
 
-  list_foreach(board->strokes, node) {
+  list_foreach(board->strokes, node, next_node) {
     Path *path = node->data;
     Uint8 r, g, b, a;
     SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
