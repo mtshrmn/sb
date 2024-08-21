@@ -15,10 +15,13 @@ DEPENDS := $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.d,$(SOURCES))
 EXECUTABLE := sb
 
 # Build target
-build: $(EXECUTABLE)
+build: $(BUILDDIR)/$(EXECUTABLE)
 
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(CFLAGS) $^ $(LIBS) -o $(BUILDDIR)/$@
+run: $(BUILDDIR)/$(EXECUTABLE)
+	./$(BUILDDIR)/$(EXECUTABLE)
+
+$(BUILDDIR)/$(EXECUTABLE): $(OBJECTS)
+	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
 
 # Object file compilation rule
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
