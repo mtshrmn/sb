@@ -52,11 +52,11 @@ Board *board_create(int width, int height) {
   SDL_Cursor *default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
   DEFER_IF_NULL(default_cursor);
 
-  List *current_stroke_points = list_create((void *)&point_free);
+  List *current_stroke_points = list_create((list_free_function)point_free);
   DEFER_IF_NULL(current_stroke_points);
-  List *current_stroke_paths = list_create((void *)&cairo_path_destroy);
+  List *current_stroke_paths = list_create((list_free_function)cairo_path_destroy);
   DEFER_IF_NULL(current_stroke_paths);
-  List *strokes = list_create((void *)&path_free);
+  List *strokes = list_create((list_free_function)path_free);
   DEFER_IF_NULL(strokes);
 
   board->window = window;
