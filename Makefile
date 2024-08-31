@@ -1,6 +1,7 @@
 CC := gcc
 CFLAGS := -Wall -Wextra -Wpedantic
 LIBS := -lSDL2 -lcairo -lm
+USER_DEFINE := -DUSER='"$(USER)"'
 
 # Directories
 SRCDIR := src
@@ -21,11 +22,11 @@ run: $(BUILDDIR)/$(EXECUTABLE)
 	./$(BUILDDIR)/$(EXECUTABLE)
 
 $(BUILDDIR)/$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
+	$(CC) $(CFLAGS) $^ $(LIBS) $(USER_DEFINE) -o $@
 
 # Object file compilation rule
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	$(CC) $(CFLAGS) $(USER_DEFINE) -MMD -MP -c $< -o $@
 
 -include $(DEPENDS)
 

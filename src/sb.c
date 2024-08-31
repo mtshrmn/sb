@@ -275,8 +275,8 @@ void on_key_down(Board *board) {
     time(&timer);
     struct tm *time_info = localtime(&timer);
 
-    char filename[30];
-    if (strftime(filename, sizeof(filename), "sb_%Y_%m_%d-%H:%M:%S.png", time_info) == 0) {
+    char filename[128];
+    if (strftime(filename, sizeof(filename), SCREENSHOTS_PATH "sb_%Y_%m_%d-%H:%M:%S.png", time_info) == 0) {
       return;
     }
 

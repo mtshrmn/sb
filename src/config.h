@@ -22,6 +22,12 @@
 #define STROKES_AMOUNT 5
 #define COLORS_AMOUNT 2
 
+#ifdef USER
+#define SCREENSHOTS_PATH "/home/" USER "/pictures/sb/"
+#else
+#define SCREENSHOTS_PATH "./"
+#endif
+
 // --------------------------------------------
 #if THEME
 #define BOARD_BG _BOARD_BG_LIGHT
