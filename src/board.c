@@ -334,6 +334,33 @@ void board_set_stroke_color(Board *board, unsigned int color) {
   board_refresh(board);
 }
 
+int board_delete_intersecting_paths(Board *board, cairo_path_t *path) {
+  int eraser_count;
+  int did_paths_got_deleted = 0;
+  Point *eraser_pts = path_flatten(path, &eraser_count);
+  if (eraser_pts == NULL) {
+    return 0;
+  }
+
+  ListNode *node, *next_node;
+  list_foreach(board->strokes, node, next_node) {
+    Path *path = node->data;
+    int path_count;
+    Point *path_pts = path_flatten(path->path, &path_count);
+    if (path_pts != NULL) {
+      if (path_polylines_intersect(eraser_pts, eraser_count, path_pts, path_count, STROKE_WIDTH_THICKEST)) {
+        did_paths_got_deleted = 1;
+        list_remove(board->strokes, node);
+      }
+      free(path_pts);
+    }
+  }
+
+  free(eraser_pts);
+  board_refresh(board);
+  return did_paths_got_deleted;
+}
+
 int board_save_image(Board *board, char *path) {
   // calculate bounding area of image
   Point top_left, bottom_right;

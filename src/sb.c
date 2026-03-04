@@ -78,6 +78,7 @@ void on_mouse_left_button_down(Board *board) {
   };
   board_render(board, &bounds);
 }
+
 void on_mouse_right_button_down(Board *board) {
   board_update_mouse_state(board);
   board->state = STATE_MOVING;
@@ -107,8 +108,18 @@ void on_mouse_left_button_up(Board *board) {
 
   cairo_path_t *stroke = merge_paths(board->cr, board->current_stroke_paths);
   cairo_new_path(board->cr);
-  Path *colored_stroke = path_create(stroke, board->stroke_color, board->stroke_width);
-  list_append(board->strokes, colored_stroke);
+
+  if (board->stroke_color != BOARD_BG) {
+    Path *colored_stroke = path_create(stroke, board->stroke_color, board->stroke_width);
+    list_append(board->strokes, colored_stroke);
+    board->state = STATE_IDLE;
+    return;
+  }
+
+  // remove all paths that intersect colored_stroke
+  board_delete_intersecting_paths(board, stroke);
+  board_refresh(board);
+  cairo_path_destroy(stroke);
   board->state = STATE_IDLE;
 }
 

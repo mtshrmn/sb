@@ -17,6 +17,10 @@ Point point_multiply(Point p, double scalar);
 Point point_normalize(Point p);
 // euclidian length
 double point_length(Point p);
+// squared distance from point p to line segment (a, b)
+double point_dist2_to_segment(Point p, Point a, Point b);
+// cubic bezier position at parameter t
+Point point_bezier_at(double t, Point p0, Point p1, Point p2, Point p3);
 
 void create_handle_triple(Point *p1, Point *p2, Point *p3, Point *h1, Point *h2);
 void create_handle_quad(Point *p1, Point *p2, Point *p3, Point *p4, Point *h1, Point *h2);
