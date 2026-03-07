@@ -1,5 +1,5 @@
 pkgname=sb
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="a barebone infinite whiteboard"
 arch=('x86_64')
