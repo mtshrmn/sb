@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "list.h"
+#include "pdll.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
@@ -38,7 +39,7 @@ typedef struct Board {
 
   List *current_stroke_points; // contains Point
   List *current_stroke_paths;  // contains cairo_path_t
-  List *strokes;               // contains Path
+  pdll *strokes;               // contains Path
   BoardState state;
   double mouse_x;
   int mouse_x_raw;

@@ -111,7 +111,7 @@ void on_mouse_left_button_up(Board *board) {
 
   if (board->stroke_color != BOARD_BG) {
     Path *colored_stroke = path_create(stroke, board->stroke_color, board->stroke_width);
-    list_append(board->strokes, colored_stroke);
+    pdll_append(board->strokes, colored_stroke);
     board->state = STATE_IDLE;
     return;
   }
@@ -225,8 +225,7 @@ void on_key_down(Board *board) {
 
   // ctrl+z -> undo last stroke
   if (keys[SDL_SCANCODE_LCTRL] && keys[SDL_SCANCODE_Z]) {
-    if (board->strokes->length != 0) {
-      list_pop(board->strokes);
+    if (pdll_undo(board->strokes)) {
       board_refresh(board);
     }
     return;

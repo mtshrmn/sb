@@ -56,7 +56,7 @@ Board *board_create(int width, int height) {
   DEFER_IF_NULL(current_stroke_points);
   List *current_stroke_paths = list_create((list_free_function)cairo_path_destroy);
   DEFER_IF_NULL(current_stroke_paths);
-  List *strokes = list_create((list_free_function)path_free);
+  pdll *strokes = pdll_init((pdll_free_node_data_func)path_free);
   DEFER_IF_NULL(strokes);
 
   board->window = window;
@@ -103,14 +103,14 @@ defer:
   if (current_stroke_paths != NULL)
     list_free(current_stroke_paths);
   if (strokes != NULL)
-    list_free(strokes);
+    pdll_free(strokes);
   if (default_cursor != NULL)
     SDL_FreeCursor(default_cursor);
   return NULL;
 }
 
 void board_free(Board *board) {
-  list_free(board->strokes);
+  pdll_free(board->strokes);
   list_free(board->current_stroke_paths);
   list_free(board->current_stroke_points);
 
@@ -218,8 +218,7 @@ void board_setup_draw(Board *board) {
 
 void board_draw_strokes(Board *board) {
   board_setup_draw(board);
-  ListNode *node, *next_node;
-  list_foreach(board->strokes, node, next_node) {
+  pdll_iter(board->strokes, node) {
     cairo_new_path(board->cr);
     Path *path = node->data;
     Uint8 r, g, b, a;
@@ -342,19 +341,19 @@ int board_delete_intersecting_paths(Board *board, cairo_path_t *path) {
     return 0;
   }
 
-  ListNode *node, *next_node;
-  list_foreach(board->strokes, node, next_node) {
+  pdll_iter(board->strokes, node) {
     Path *path = node->data;
     int path_count;
     Point *path_pts = path_flatten(path->path, &path_count);
     if (path_pts != NULL) {
       if (path_polylines_intersect(eraser_pts, eraser_count, path_pts, path_count, STROKE_WIDTH_THICKEST)) {
         did_paths_got_deleted = 1;
-        list_remove(board->strokes, node);
+        pdll_node_mark_for_deletion(node);
       }
       free(path_pts);
     }
   }
+  pdll_delete_marked_nodes(board->strokes);
 
   free(eraser_pts);
   board_refresh(board);
@@ -366,8 +365,7 @@ int board_save_image(Board *board, char *path) {
   Point top_left, bottom_right;
   cairo_path_t *prev_path = cairo_copy_path(board->cr);
 
-  ListNode *node, *next_node;
-  list_foreach(board->strokes, node, next_node) {
+  pdll_iter(board->strokes, node) {
     cairo_path_t *path = ((Path *)node->data)->path;
     cairo_append_path(board->cr, path);
   }
@@ -389,7 +387,7 @@ int board_save_image(Board *board, char *path) {
   cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
   cairo_translate(cr, -top_left.x + 5, -top_left.y + 5);
 
-  list_foreach(board->strokes, node, next_node) {
+  pdll_iter(board->strokes, node) {
     Path *path = node->data;
     Uint8 r, g, b, a;
     SDL_GetRGBA(path->color, board->sdl_surface->format, &r, &g, &b, &a);
