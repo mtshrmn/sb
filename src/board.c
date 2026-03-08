@@ -353,7 +353,9 @@ int board_delete_intersecting_paths(Board *board, cairo_path_t *path) {
       free(path_pts);
     }
   }
-  pdll_delete_marked_nodes(board->strokes);
+  if (did_paths_got_deleted) {
+    pdll_delete_marked_nodes(board->strokes);
+  }
 
   free(eraser_pts);
   board_refresh(board);
