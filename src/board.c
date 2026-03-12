@@ -40,7 +40,7 @@ Board *board_create(int width, int height) {
   int renderer_height;
   SDL_GetRendererOutputSize(renderer, &renderer_width, &renderer_height);
 
-  sdl_surface = SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0);
+  sdl_surface = SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, R_MASK, G_MASK, B_MASK, 0);
   DEFER_IF_NULL(sdl_surface);
 
   sdl_texture = SDL_CreateTextureFromSurface(renderer, sdl_surface);

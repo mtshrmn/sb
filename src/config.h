@@ -4,14 +4,14 @@
 #define THEME THEME_DARK
 
 // color format is - 0xAARRGGBB
-#define _COLOR_PRIMARY_DARK 0xFFFFFFFF
-#define _COLOR_SECNDARY_DARK 0xFFFF0000
-#define _BOARD_BG_DARK 0xFF000000
+#define COLOR_PRIMARY_DARK 0xFFFFFFFF
+#define COLOR_SECNDARY_DARK 0xFFFF0000
+#define BOARD_BG_DARK 0xFF000000
 
 // light theme colors definitions
-#define _COLOR_PRIMARY_LIGHT 0xFF000000
-#define _COLOR_SECNDARY_LIGHT 0xFFFF0000
-#define _BOARD_BG_LIGHT 0xFFFFFFFF
+#define COLOR_PRIMARY_LIGHT 0xFF000000
+#define COLOR_SECNDARY_LIGHT 0xFFFF0000
+#define BOARD_BG_LIGHT 0xFFFFFDD0
 
 // stroke widths
 #define STROKE_WIDTH_THIN 1.5
@@ -30,16 +30,16 @@
 
 // --------------------------------------------
 #if THEME
-#define BOARD_BG _BOARD_BG_LIGHT
-#define BOARD_BG_INVERTED _BOARD_BG_DARK
-#define COLOR_PRIMARY _COLOR_PRIMARY_LIGHT
-#define COLOR_SECONDARY _COLOR_SECNDARY_LIGHT
+#define BOARD_BG BOARD_BG_LIGHT
+#define BOARD_BG_INVERTED BOARD_BG_DARK
+#define COLOR_PRIMARY COLOR_PRIMARY_LIGHT
+#define COLOR_SECONDARY COLOR_SECNDARY_LIGHT
 
 #else
-#define BOARD_BG _BOARD_BG_DARK
-#define BOARD_BG_INVERTED _BOARD_BG_LIGHT
-#define COLOR_PRIMARY _COLOR_PRIMARY_DARK
-#define COLOR_SECONDARY _COLOR_SECNDARY_DARK
+#define BOARD_BG BOARD_BG_DARK
+#define BOARD_BG_INVERTED BOARD_BG_LIGHT
+#define COLOR_PRIMARY COLOR_PRIMARY_DARK
+#define COLOR_SECONDARY COLOR_SECNDARY_DARK
 
 #endif
 
@@ -48,8 +48,11 @@
 #define G_MASK 0x0000FF00
 #define B_MASK 0x000000FF
 
-#define BOARD_BG_CAIRO                                                                                                 \
-  ((BOARD_BG & R_MASK) >> 16), ((BOARD_BG & G_MASK) >> 8), (BOARD_BG & B_MASK), ((BOARD_BG & A_MASK) >> 24)
+#define CAIRO_R(color) ((double)(((color) & R_MASK) >> 16) / (double)0xFF)
+#define CAIRO_G(color) ((double)(((color) & G_MASK) >> 8) / (double)0xFF)
+#define CAIRO_B(color) ((double)((color) & B_MASK) / (double)0xFF)
+#define CAIRO_A(color) ((double)(((color) & A_MASK) >> 24) / (double)0xFF)
+
+#define BOARD_BG_CAIRO CAIRO_R(BOARD_BG), CAIRO_G(BOARD_BG), CAIRO_B(BOARD_BG), CAIRO_A(BOARD_BG)
 #define BOARD_BG_INVERTED_CAIRO                                                                                        \
-  ((BOARD_BG_INVERTED & R_MASK) >> 16), ((BOARD_BG_INVERTED & G_MASK) >> 8), (BOARD_BG_INVERTED & B_MASK),             \
-      ((BOARD_BG_INVERTED & A_MASK) >> 24)
+  CAIRO_R(BOARD_BG_INVERTED), CAIRO_G(BOARD_BG_INVERTED), CAIRO_B(BOARD_BG_INVERTED), CAIRO_A(BOARD_BG_INVERTED)
