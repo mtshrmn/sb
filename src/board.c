@@ -12,13 +12,24 @@
 
 Board *board_create(int width, int height) {
   Board *board = malloc(sizeof(Board));
+  SDL_Window *window = NULL;
+  SDL_Renderer *renderer = NULL;
+  SDL_Surface *sdl_surface = NULL;
+  SDL_Texture *sdl_texture = NULL;
+  cairo_surface_t *cr_surface = NULL;
+  cairo_t *canvas = NULL;
+  SDL_Cursor *default_cursor = NULL;
+  List *current_stroke_points = NULL;
+  List *current_stroke_paths = NULL;
+  pdll *strokes = NULL;
+
   DEFER_IF_NULL(board);
 
-  SDL_Window *window = SDL_CreateWindow("Simple Board", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height,
-                                        SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+  window = SDL_CreateWindow("Simple Board", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height,
+                            SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
   DEFER_IF_NULL(window);
 
-  SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
   DEFER_IF_NULL(renderer);
 
   int window_width;
@@ -29,34 +40,33 @@ Board *board_create(int width, int height) {
   int renderer_height;
   SDL_GetRendererOutputSize(renderer, &renderer_width, &renderer_height);
 
-  SDL_Surface *sdl_surface =
-      SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0);
+  sdl_surface = SDL_CreateRGBSurface(0, renderer_width, renderer_height, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0);
   DEFER_IF_NULL(sdl_surface);
 
-  SDL_Texture *sdl_texture = SDL_CreateTextureFromSurface(renderer, sdl_surface);
+  sdl_texture = SDL_CreateTextureFromSurface(renderer, sdl_surface);
   DEFER_IF_NULL(sdl_texture);
 
-  cairo_surface_t *cr_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h);
+  cr_surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, sdl_surface->w, sdl_surface->h);
   DEFER_IF_NULL(cr_surface);
 
   int x_multiplier = renderer_width / window_width;
   int y_multiplier = renderer_height / window_height;
   cairo_surface_set_device_scale(cr_surface, x_multiplier, y_multiplier);
 
-  cairo_t *canvas = cairo_create(cr_surface);
+  canvas = cairo_create(cr_surface);
 
   SDL_SetRenderDrawColor(renderer, BOARD_BG_CAIRO);
   SDL_RenderClear(renderer);
   DEFER_IF_NULL(canvas);
 
-  SDL_Cursor *default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+  default_cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
   DEFER_IF_NULL(default_cursor);
 
-  List *current_stroke_points = list_create((list_free_function)point_free);
+  current_stroke_points = list_create((list_free_function)point_free);
   DEFER_IF_NULL(current_stroke_points);
-  List *current_stroke_paths = list_create((list_free_function)cairo_path_destroy);
+  current_stroke_paths = list_create((list_free_function)cairo_path_destroy);
   DEFER_IF_NULL(current_stroke_paths);
-  pdll *strokes = pdll_init((pdll_free_node_data_func)path_free);
+  strokes = pdll_init((pdll_free_node_data_func)path_free);
   DEFER_IF_NULL(strokes);
 
   board->window = window;
