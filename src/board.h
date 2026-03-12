@@ -9,11 +9,25 @@
 #include <SDL2/SDL_events.h>
 #include <cairo/cairo.h>
 
+#define SCRATCH_PAD_WIDTH 128
+#define SCRATCH_PAD_HEIGHT 128
+
 typedef enum BoardState {
   STATE_IDLE,
   STATE_DRAWING,
   STATE_MOVING,
 } BoardState;
+
+typedef struct ScratchPad {
+  cairo_t *scratch_cr;
+  cairo_t *query_cr;
+  cairo_surface_t *scratch_surface;
+  cairo_surface_t *query_surface;
+  double scale_x;
+  double scale_y;
+  double origin_x;
+  double origin_y;
+} ScratchPad;
 
 typedef struct Board {
   SDL_Window *window;

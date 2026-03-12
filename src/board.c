@@ -333,31 +333,166 @@ void board_set_stroke_color(Board *board, unsigned int color) {
   board_refresh(board);
 }
 
+ScratchPad *scratchpad_new(cairo_path_t *query) {
+  // synopsis:
+  // use cairo's builtin algorithms to check if two paths are intersecting.
+  // this is done in two steps
+  // 1. create a scratch pad with the eraser path.
+  // 2. using that scratch pad to check if a path intersects with the eraser.
+  //
+  // motivation:
+  // create 2 surfaces (and cairo contexts):
+  // one will be the "query" - stores the eraser path
+  // the other one will be the "scratch" - we copy the query surface with
+  // a mask - if both paths intersect we actually draw the eraser pixel on that surface
+  // meaning that if as a result we get a non-zero pixel - both paths intersect.
+  //
+  // since those surfaces are WAY smaller than the infinite board,
+  // we scale everything down by the bounding box of the eraser path
+  // and translate it to be in the center of the screen.
+  // this function - "scratchpad_new()" just sets both surfaces and related
+  // information that is needed later for the intersection check
+
+  // create a temp surface just to compute the needed transformation and translation.
+  cairo_surface_t *tmp_surface = cairo_image_surface_create(CAIRO_FORMAT_A8, 1, 1);
+  if (tmp_surface == NULL)
+    return NULL;
+
+  cairo_t *tmp_cr = cairo_create(tmp_surface);
+  if (tmp_cr == NULL) {
+    cairo_surface_destroy(tmp_surface);
+    return NULL;
+  }
+
+  double x1, y1, x2, y2;
+  cairo_append_path(tmp_cr, query);
+  cairo_path_extents(tmp_cr, &x1, &y1, &x2, &y2);
+  cairo_destroy(tmp_cr);
+  cairo_surface_destroy(tmp_surface);
+
+  double origin_x = x1;
+  double origin_y = y1;
+  double scale_x = SCRATCH_PAD_WIDTH / (x2 - x1);
+  double scale_y = SCRATCH_PAD_HEIGHT / (y2 - y1);
+
+  // create both surfaces and cairo contexts.
+  cairo_surface_t *query_surface = cairo_image_surface_create(CAIRO_FORMAT_A8, SCRATCH_PAD_WIDTH, SCRATCH_PAD_HEIGHT);
+  if (query_surface == NULL)
+    return NULL;
+
+  cairo_surface_t *scratch_surface = cairo_image_surface_create(CAIRO_FORMAT_A8, SCRATCH_PAD_WIDTH, SCRATCH_PAD_HEIGHT);
+  if (scratch_surface == NULL) {
+    cairo_surface_destroy(query_surface);
+    return NULL;
+  }
+
+  cairo_t *query_cr = cairo_create(query_surface);
+  if (query_cr == NULL) {
+    cairo_surface_destroy(query_surface);
+    cairo_surface_destroy(scratch_surface);
+    return NULL;
+  }
+
+  cairo_t *scratch_cr = cairo_create(scratch_surface);
+  if (scratch_cr == NULL) {
+    cairo_surface_destroy(query_surface);
+    cairo_surface_destroy(scratch_surface);
+    cairo_destroy(query_cr);
+    return NULL;
+  }
+
+  // render eraser path into query_surface and populate the scratchpad
+  cairo_set_line_width(query_cr, STROKE_WIDTH_THICKEST);
+  cairo_set_line_cap(query_cr, CAIRO_LINE_CAP_ROUND);
+  cairo_set_line_join(query_cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_scale(query_cr, scale_x, scale_y);
+  cairo_translate(query_cr, -origin_x, -origin_y);
+  cairo_append_path(query_cr, query);
+  cairo_stroke(query_cr);
+
+  ScratchPad *pad = malloc(sizeof(ScratchPad));
+  if (pad == NULL) {
+    cairo_surface_destroy(query_surface);
+    cairo_surface_destroy(scratch_surface);
+    cairo_destroy(query_cr);
+    cairo_destroy(scratch_cr);
+    return NULL;
+  }
+
+  pad->scratch_cr = scratch_cr;
+  pad->query_cr = query_cr;
+  pad->scratch_surface = scratch_surface;
+  pad->query_surface = query_surface;
+  pad->scale_x = scale_x;
+  pad->scale_y = scale_y;
+  pad->origin_x = origin_x;
+  pad->origin_y = origin_y;
+  return pad;
+}
+
+void scratchpad_destroy(ScratchPad *pad) {
+  cairo_surface_destroy(pad->query_surface);
+  cairo_surface_destroy(pad->scratch_surface);
+  cairo_destroy(pad->scratch_cr);
+  cairo_destroy(pad->query_cr);
+  free(pad);
+}
+
+bool scratchpad_test_intersection(ScratchPad *pad, cairo_path_t *path, double stroke_width) {
+  // this is the second part of the intersection checking.
+  // copy the rendered eraser path from the query_surface.
+  cairo_set_operator(pad->scratch_cr, CAIRO_OPERATOR_SOURCE);
+  cairo_set_source_surface(pad->scratch_cr, pad->query_surface, 0, 0);
+  cairo_paint(pad->scratch_cr);
+
+  // draw the path on top using OPERATOR_IN:
+  // only pixels where both the eraser and the path are painted survive.
+  cairo_save(pad->scratch_cr);
+  cairo_set_line_width(pad->scratch_cr, stroke_width);
+  cairo_set_line_cap(pad->scratch_cr, CAIRO_LINE_CAP_ROUND);
+  cairo_set_line_join(pad->scratch_cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_scale(pad->scratch_cr, pad->scale_x, pad->scale_y);
+  cairo_translate(pad->scratch_cr, -pad->origin_x, -pad->origin_y);
+  cairo_append_path(pad->scratch_cr, path);
+  cairo_set_operator(pad->scratch_cr, CAIRO_OPERATOR_IN);
+  cairo_stroke(pad->scratch_cr);
+  cairo_restore(pad->scratch_cr);
+
+  cairo_surface_flush(pad->scratch_surface);
+  const uint8_t *data = cairo_image_surface_get_data(pad->scratch_surface);
+  int stride = cairo_image_surface_get_stride(pad->scratch_surface);
+
+  for (int y = 0; y < SCRATCH_PAD_HEIGHT; ++y) {
+    const uint8_t *row = data + y * stride;
+    for (int x = 0; x < SCRATCH_PAD_WIDTH; ++x) {
+      if (row[x])
+        return true;
+    }
+  }
+
+  return false;
+}
+
 int board_delete_intersecting_paths(Board *board, cairo_path_t *path) {
-  int eraser_count;
   int did_paths_got_deleted = 0;
-  Point *eraser_pts = path_flatten(path, &eraser_count);
-  if (eraser_pts == NULL) {
-    return 0;
+  ScratchPad *pad = scratchpad_new(path);
+  if (pad == NULL) {
+    return false;
   }
 
   pdll_iter(board->strokes, node) {
     Path *path = node->data;
-    int path_count;
-    Point *path_pts = path_flatten(path->path, &path_count);
-    if (path_pts != NULL) {
-      if (path_polylines_intersect(eraser_pts, eraser_count, path_pts, path_count, STROKE_WIDTH_THICKEST)) {
-        did_paths_got_deleted = 1;
-        pdll_node_mark_for_deletion(node);
-      }
-      free(path_pts);
+    if (scratchpad_test_intersection(pad, path->path, path->width)) {
+      did_paths_got_deleted = 1;
+      pdll_node_mark_for_deletion(node);
     }
   }
+
   if (did_paths_got_deleted) {
     pdll_delete_marked_nodes(board->strokes);
   }
 
-  free(eraser_pts);
+  scratchpad_destroy(pad);
   board_refresh(board);
   return did_paths_got_deleted;
 }
