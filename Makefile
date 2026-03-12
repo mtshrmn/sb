@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -Wextra -Wpedantic
+CFLAGS := -Wall -Wextra -Wpedantic -O2
 LIBS := -lSDL2 -lcairo -lm
 USER_DEFINE := -DUSER='"$(USER)"'
 
