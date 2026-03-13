@@ -475,12 +475,13 @@ bool scratchpad_test_intersection(ScratchPad *pad, cairo_path_t *path, double st
   const uint8_t *data = cairo_image_surface_get_data(pad->scratch_surface);
   int stride = cairo_image_surface_get_stride(pad->scratch_surface);
 
+  if (stride == SCRATCH_PAD_WIDTH) {
+    return memchr(data, 0xFF, SCRATCH_PAD_WIDTH * SCRATCH_PAD_HEIGHT) != NULL;
+  }
+
   for (int y = 0; y < SCRATCH_PAD_HEIGHT; ++y) {
-    const uint8_t *row = data + y * stride;
-    for (int x = 0; x < SCRATCH_PAD_WIDTH; ++x) {
-      if (row[x])
-        return true;
-    }
+    if (memchr(data + y * stride, 0xFF, SCRATCH_PAD_WIDTH))
+      return true;
   }
 
   return false;
