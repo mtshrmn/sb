@@ -473,18 +473,16 @@ bool scratchpad_test_intersection(ScratchPad *pad, cairo_path_t *path, double st
 
   cairo_surface_flush(pad->scratch_surface);
   const uint8_t *data = cairo_image_surface_get_data(pad->scratch_surface);
-  int stride = cairo_image_surface_get_stride(pad->scratch_surface);
 
-  if (stride == SCRATCH_PAD_WIDTH) {
-    return memchr(data, 0xFF, SCRATCH_PAD_WIDTH * SCRATCH_PAD_HEIGHT) != NULL;
+  // check if any pixel is non-zero
+  // it is written that way since this will most likely
+  // get auto vectorized, depending on the WIDTH and HEIGHT.
+  uint8_t acc = 0;
+  for (int i = 0; i < SCRATCH_PAD_HEIGHT * SCRATCH_PAD_WIDTH; ++i) {
+    acc |= data[i];
   }
 
-  for (int y = 0; y < SCRATCH_PAD_HEIGHT; ++y) {
-    if (memchr(data + y * stride, 0xFF, SCRATCH_PAD_WIDTH))
-      return true;
-  }
-
-  return false;
+  return acc != 0;
 }
 
 int board_delete_intersecting_paths(Board *board, cairo_path_t *path) {
