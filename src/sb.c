@@ -34,16 +34,6 @@ SDL_Rect get_path_bounding_area(Board *board) {
   return area;
 }
 
-bool is_inside_rect(SDL_Rect *rect, double x, double y) {
-  if (x <= rect->x || x >= rect->x + rect->w) {
-    return false;
-  }
-  if (y <= rect->y || y >= rect->y + rect->h) {
-    return false;
-  }
-  return true;
-}
-
 void on_window_event(Board *board, SDL_Event *sdl_event) {
   switch (sdl_event->window.event) {
   case SDL_WINDOWEVENT_RESIZED:

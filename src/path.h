@@ -14,9 +14,5 @@ typedef struct {
 
 Path *path_create(cairo_path_t *path, unsigned int color, double width);
 void path_free(Path *path);
-// flatten a cairo_path_t into a Point array, caller must free() the result
-Point *path_flatten(const cairo_path_t *cp, int *out_count);
-// returns true if the two polylines come within threshold of each other
-bool path_polylines_intersect(const Point *pts_a, int count_a, const Point *pts_b, int count_b, double threshold);
 
 #endif

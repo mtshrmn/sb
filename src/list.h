@@ -29,8 +29,5 @@ void list_free(List *l);
 int list_append(List *l, void *item);
 void list_pop(List *l);
 void *list_top(List *l);
-void list_remove(List *l, ListNode *node);
-int list_contains(List *l, void *item);
-size_t list_getlen(List *l);
 
 #endif // SB_LIST_H
