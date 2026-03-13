@@ -11,7 +11,7 @@
 // light theme colors definitions
 #define COLOR_PRIMARY_LIGHT 0xFF000000
 #define COLOR_SECNDARY_LIGHT 0xFFFF0000
-#define BOARD_BG_LIGHT 0xFFFFFDD0
+#define BOARD_BG_LIGHT 0xFFFFFFFF
 
 // stroke widths
 #define STROKE_WIDTH_THIN 1.5
