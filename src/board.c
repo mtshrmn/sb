@@ -380,10 +380,13 @@ ScratchPad *scratchpad_new(cairo_path_t *query) {
   cairo_destroy(tmp_cr);
   cairo_surface_destroy(tmp_surface);
 
-  double origin_x = x1;
-  double origin_y = y1;
-  double scale_x = SCRATCH_PAD_WIDTH / (x2 - x1);
-  double scale_y = SCRATCH_PAD_HEIGHT / (y2 - y1);
+  // since using cairo_path_extents() is less expensive than cairo_stroke_extents()
+  // we use it but then we need to take into account for the thickness of the stroke.
+  // extend the bounding box by the stroke thickness in every direction.
+  double origin_x = x1 - STROKE_WIDTH_THICKEST;
+  double origin_y = y1 - STROKE_WIDTH_THICKEST;
+  double scale_x = SCRATCH_PAD_WIDTH / (x2 - x1 + 2 * STROKE_WIDTH_THICKEST);
+  double scale_y = SCRATCH_PAD_HEIGHT / (y2 - y1 + 2 * STROKE_WIDTH_THICKEST);
 
   // create both surfaces and cairo contexts.
   cairo_surface_t *query_surface = cairo_image_surface_create(CAIRO_FORMAT_A8, SCRATCH_PAD_WIDTH, SCRATCH_PAD_HEIGHT);
